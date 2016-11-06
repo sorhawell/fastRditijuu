@@ -1,0 +1,50 @@
+
+R version 3.2.2 (2015-08-14) -- "Fire Safety"
+Copyright (C) 2015 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> 
+> load(file="./.Tempexp.rda")
+> packages = export[[2]]
+> if(length(packages)>0) install.packages(packages,repos='http://cran.us.r-project.org')
+Installing package into '/zhome/c7/0/66069/R/x86_64-pc-linux-gnu-library/3.2'
+(as 'lib' is unspecified)
+trying URL 'http://cran.us.r-project.org/src/contrib/randomForest_4.6-12.tar.gz'
+Content type 'application/x-gzip' length 79566 bytes (77 KB)
+==================================================
+downloaded 77 KB
+
+ERROR: failed to lock directory '/zhome/c7/0/66069/R/x86_64-pc-linux-gnu-library/3.2' for modifying
+Try removing '/zhome/c7/0/66069/R/x86_64-pc-linux-gnu-library/3.2/00LOCK-randomForest'
+
+The downloaded source packages are in
+	'/tmp/RtmpO05wYn/downloaded_packages'
+Warning message:
+In install.packages(packages, repos = "http://cran.us.r-project.org") :
+  installation of package 'randomForest' had non-zero exit status
+> for(name in export[[2]]) require(package=name,character.only = T)
+Loading required package: randomForest
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+> out = do.call(export[[1]],export[-(1:2)])
+> saveRDS(out,file=".Tempout.rda")
+> print(out)
+[1] 2.5
+> print("Hello Master, this is HAL 9000. Work completed.")
+[1] "Hello Master, this is HAL 9000. Work completed."
+> 
+> proc.time()
+   user  system elapsed 
+  3.886   0.546  12.444 
