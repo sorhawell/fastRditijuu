@@ -23,22 +23,30 @@ readPrint()                 #get print
 out = fastRditijuu:::doBatchJob(1:250,sum,max.nodes = 3)
 out = lapply(1:10, function(x) x+1)
 out = lply(X=1:250,FUN=sum,max.nodes=4,local=T)
-out = lply(X=1:250,FUN=function(x) x+1,max.nodes=4)
+out = lply(X=1:250,FUN=function(x) x+1,max.nodes=2)
 out = lply(X=1:250,FUN=function(x) x+1,max.nodes=80)
 
-a=a
-out = lply(X=1:250,FUN=function(x) x+a,max.nodes=4,globalVar = list(a=a))
+a=1
+out = lply(X=1:250,FUN=function(x) x+a,max.nodes=4,globalVar = list(a=1))
 
-out = lply(X=1:250,FUN=function(x) x+1,max.nodes=80)
-length(out)
-
-X = data.frame(replicate(5,rnorm(1000)))
+#try run single model
+X = data.frame(replicate(15,rnorm(1000)))
 y = with(X,X1*X2+X3)
 model = doClust("randomForest",list(x=X,y=y,ntree=1000),packages="randomForest")  #on DTU cluster
-model = randomForest(x=X,y=y,ntree=1000)
 library(randomForest)
 print(model)
 preds = predict(model,X)
 
 
+#try run 48 models
+out = lply(1:5,function(mtry) {
+  cat("does y exist?", exists("y"))
+  print(ls())
+  #randomForest(x=X2,y=y,mtry=mtry)
+  },
+           globalVar=list(X2=X,y=y),
+           packages=c("randomForest"),
+           user="sowe",local=F)
+out = fastRditijuu:::doBatchJob(1:15,function(mtry) mtry+1,
+                                X=X,y=y,packages="randomForest")
 

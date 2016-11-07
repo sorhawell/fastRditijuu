@@ -63,7 +63,7 @@ doBatchJob = function(X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
   reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L))
   save(reg,file="testBatchJobs-files/reg.rda")
   batchMap(reg,fun=lapply,X=jobArrays,use.names=T,
-           more.args = list(FUN=FUN,...))
+           more.args = c(list(FUN=FUN,...),globalVar))
   submitJobs(reg)
   waitForJobs(reg)
   out = unlist(loadResults(reg,1:cluster.nodes),recursive = FALSE)
@@ -87,13 +87,15 @@ doBatchJob = function(X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
 #' @return list of results
 #' @export
 lply = function(X, FUN, user="sowe", host="login.gbar.dtu.dk", Rscript=T,
-                packages=c(),max.nodes=24,local=FALSE,export=list(),globalVar=list(),...) {
+                packages=c(),max.nodes=24,local=FALSE,globalVar=list(),...) {
   if(local) {
     require("BatchJobs")
-    out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,...))
+    out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,
+                                            globalVar=globalVar,...))
   } else {
     packages = unique(c(packages,"BatchJobs")) #include BatchJobs package on server
-    out = doClust(doBatchJob,arg=list(X=X,FUN=FUN,max.nodes=max.nodes,globalVar=globalVar,...),
+    out = doClust(doBatchJob,arg=list(X=X,FUN=FUN,max.nodes=max.nodes,
+                                      globalVar=globalVar,packages=packages,...),
                   packages=packages,
                   Rscript=Rscript)
   }
