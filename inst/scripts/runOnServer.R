@@ -11,6 +11,7 @@
 print("loading export")
 load(file="./.Tempexp.rda")
 
+print("print export on server side")
 print(export)
 
 print("check, install and load packages")
@@ -51,10 +52,16 @@ if("package:BatchJobs" %in% search()) {
     #suppress warning, when nodes get ueven amount of jobs.
 
     #Use BatchJobs package to create
-    reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L),
-                        src.files = if(length(globalVar)) "./.slaveSource.R" else character(0L))
+    wrapB = function(X,FUN,...) {
+      #load attach global vars on slave machine
+      load('.globalVar.rda')
+      attach(globalVar)
+      #run array of jobs on this slave
+      lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
+    }
+    reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L))
     save(reg,file="testBatchJobs-files/reg.rda")
-    batchMap(reg,fun=lapply,X=jobArrays,use.names=T,more.args = c(list(FUN=FUN,...)))
+    batchMap(reg,fun=wrapB,X=jobArrays,use.names=T,more.args = c(list(FUN=FUN,...)))
     submitJobs(reg)
     waitForJobs(reg)
     out = unlist(loadResults(reg,1:cluster.nodes),recursive = FALSE)
@@ -64,15 +71,21 @@ if("package:BatchJobs" %in% search()) {
   }
 
   if(length(export$globalVar)) {
-    save(export$globalVar,file=".globalVar.rda")
+    print(ls())
+    str(export)
+    globalVar = export$globalVar
+    save(globalVar,file=".globalVar.rda")
   #write source file for slaves to load global variables
+    print("write .slaveSource.R file to")
+    print(getwd())
     writeLines( text =
 "#source slave
-if('globalVar.rda' %in% list.files()) {
-  load('./.globalVar.rda')
-} else {
-  print('friendly warning: globalVar file not found, try execute slave without')
-}", con = "./.slaveSource.R")
+#if('.globalVar.rda' %in% list.files()) {
+  load('.globalVar.rda')
+  print('loading sorce')
+#} else {
+#  print('friendly warning: globalVar file not found, try execute slave without')",
+con = ".slaveSource.R")
 
   }
 
@@ -88,9 +101,11 @@ out = with(export$globalVar,{
 
            do.call(eval(export$what),export$arg,quote=T)
       })
-
+str(out)
 print("save output")
 saveRDS(out,file=".Tempout.rda")
 
 print("Hello Master, this is HAL 9000. Work completed, returning to local.")
 print(Sys.time())
+Sys.sleep(3)
+print("exit")

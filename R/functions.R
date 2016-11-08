@@ -13,7 +13,9 @@
 doClust = function(what,arg=list(),user='sowe',host='login.gbar.dtu.dk',packages=c(),
                    Rscript=TRUE,globalVar=list(),sourceSupportFunctions=T) {
   if(!is.list(arg)) arg = list(arg)
-  export = c(what=list(substitute(what)),packages=list(packages),arg=list(arg),globalVar=list(globalVar))
+  export = c(what=list(substitute(what)),packages=list(packages),
+             arg=list(arg),globalVar=list(globalVar))
+  print(export)
   save(export, file="./.Tempexp.rda")
 
   #export variables
@@ -35,7 +37,7 @@ doClust = function(what,arg=list(),user='sowe',host='login.gbar.dtu.dk',packages
 
   #retrieve result
   outFile = ".Tempout.rda"
-  retrieveCall = paste0("timeout 3s scp ", hostString,":",outFile," ",getwd(),"/",outFile)
+  retrieveCall = paste0("scp ", hostString,":",outFile," ",getwd(),"/",outFile)
   system(retrieveCall)
   out = readRDS(file=outFile)
   return(out)
@@ -95,9 +97,10 @@ lply = function(X, FUN, user="sowe", host="login.gbar.dtu.dk", Rscript=T,
   } else {
     packages = unique(c(packages,"BatchJobs")) #include BatchJobs package on server
     out = doClust(doBatchJob,arg=list(X=X,FUN=FUN,max.nodes=max.nodes,
-                                      globalVar=globalVar,packages=packages,...),
+                                      packages=packages,...),
                   packages=packages,
-                  Rscript=Rscript)
+                  Rscript=Rscript,
+                  globalVar=globalVar)
   }
   names(out) = names(X) #restore list naming
   return(out)

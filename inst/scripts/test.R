@@ -30,8 +30,8 @@ a=1
 out = lply(X=1:250,FUN=function(x) x+a,max.nodes=4,globalVar = list(a=1))
 
 #try run single model
-X = data.frame(replicate(15,rnorm(1000)))
-y = with(X,X1*X2+X3)
+X2 = data.frame(replicate(24,rnorm(500)))
+y = with(X2,X1*X2+X3)
 model = doClust("randomForest",list(x=X,y=y,ntree=1000),packages="randomForest")  #on DTU cluster
 library(randomForest)
 print(model)
@@ -39,14 +39,12 @@ preds = predict(model,X)
 
 
 #try run 48 models
-out = lply(1:5,function(mtry) {
-  cat("does y exist?", exists("y"))
-  print(ls())
-  #randomForest(x=X2,y=y,mtry=mtry)
-  },
-           globalVar=list(X2=X,y=y),
+out = lply(rep(1:24,500),function(mtry) tail(randomForest(x=X2,y=y,mtry=mtry)$rsq,1),
+           globalVar=list(X2=X2,y=y),
            packages=c("randomForest"),
-           user="sowe",local=F)
+           user="sowe",local=F,max.nodes = 80)
+plot(rep(1:24,500),unlist(out),col="#23232393")
+
 out = fastRditijuu:::doBatchJob(1:15,function(mtry) mtry+1,
                                 X=X,y=y,packages="randomForest")
-
+lapply(out,class)
