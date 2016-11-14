@@ -1,0 +1,107 @@
+---
+title: "Vignette for fastRditijuu"
+output:
+  html_notebook:
+    theme: readable
+  html_document: default
+  pdf_document: default
+---
+
+This is a guide for the [fastRditijuu](http://github.com/sorhawell/fastRditijuu) package. The following examples document how to seamlessly run large batch jobs with the DTU cluster as backend. A standard user can reserve up to 80 nodes, so a quite powerful upgrade from a single PC.
+
+
+**Hello World(s)**
+R can execute a function such as `mean()` with e.g. an integer vector `x=c(1:3,NA)` and a bool `na.rm=TRUE` as arguments.
+
+```{r}
+mean(x=c(1:3,NA),na.rm = TRUE)
+```
+
+With the function `do.call()` we can generilize how R call any function. 'do.call()' needs at least two arguments, and these are: `what=`, the char name of the function or the function it self to be called, and `arg=`, a list of arguments to be passed to that function.
+
+```{r}
+do.call(what='mean',args=list(x=c(1:3,NA),na.rm = TRUE))
+```
+The `doClust()` function of this fastRditijuu package behaves similar to do.call, except that it calls the function not on the local instance of R, but on an instance of R on a DTU server. `doClust()` needs the same `what=` and `arg=`. However the user must at least also supply DTU username (initials/studentnumber). Here I run the same code on a DTU server. 
+*(sowe are my initials. You cannot use the same, as you do not have my private ssh key. If you do have my private ssh key, then f%#k you).*
+
+```{r}
+library(fastRditijuu)
+doClust(mean,list(x=c(1:3,NA),na.rm=T),user="sowe")
+```
+
+To simply outsource one function call to the server side is not faster unless your PC is old and slow. To connect to the server, transfer files, run an Rscript and transfer output back takes around 2 seconds. And this lag will increase if the amount of data transferred gets bigger.
+
+It is possible to run a function depending on a global variable
+
+```{r, echo=TRUE}
+#run function that refer to an external variable, include variable in scope
+a=4 #some global variable
+doClust(function(x) x+a , #this function expects a to present in the environment
+  list(c(1:7)), #the arguments the function accepts (`a` cannot be passed through)
+  globalVar = list(a=a)) #the global variable must be mentioned here
+```
+
+```{r, echo=TRUE}
+#write mget(ls()) to export entire enviroment (more data to send)
+a = 4
+b = rnorm(100000) #some bigger object gets exported to server also
+doClust(function(x) x+a ,list(c(1:7)),
+  globalVar = mget(ls()) 
+)
+```
+
+In order to really take advantage of the cluster, **fastRditijuu** wraps the **BatchJobs** package and provide the function lply which behaves as lapply on a local machine except the back end is a DTU cluster. Starting a single job on the server side takes only 2 seconds, starting 8 to 80 nodes will take from 20 seconds to 1 minute. Thus task at hand should take at least 5-10 minutes on a local machine fastRditijuu can be come useful. What ever can be formulated as a `lapply()` call can be parallized to multiple nodes. The iterated function of the lapply can read from the global environment as seen above. However it cannot write directly to one global environment, as the nodes at execution time have seperate copies of this enviroment. Thus any use of `<<-` or similar global variable assignment is discouraged, otherwise go nuts!
+
+Why not just use the **BatchJobs** package? I'm personally a fan, however I find my self use at least one to two hours to set up the package. Beginners have fimiliarize themselves with *bash terminal*, *ssh*, *qsub* and package before starting, this takes several hours to days. Therefore the problem have to be really computational nasty, before someone care to learn this. First a silly example to check the `lply` function works:
+
+```{r, echo=TRUE}
+#itereate over 1 to 250, function is 'add one'
+out = lply(X=1:250,FUN=function(x) x+1,
+  #splite the 250jobs on 2 slave nodes
+  max.nodes=2,
+  #insert a DTU username here (remember ssh keys)
+  user="sowe")
+
+```
+
+*Notice that although there were 250 jobs, we only split the task on two nodes as starting more nodes would take too much time. Number of nodes is the euqal to number of jobs, unless limited to less by max.nodes.* 
+
+
+
+The **fastRditijuu** package provide on top of **BatchJobs** a seamless job array system, such that one node can complete several jobs before returning. Also, the package provide a global variable scoping, which allow the apply calls to written in generel fewer lines. E.g. one lapply call can itereate over sets of model parameters, the function would be a model function, and the data can be referred to in the global enviroment. Lets try this.
+
+
+```{r, echo=TRUE}
+#try run 1000 RF models models, to find best mtry
+#make a training set, X is features, and y the target
+X = data.frame(replicate(20,rnorm(1500)))
+y = with(X,X1*X2+X3)
+
+system.time(
+  {out = lply(
+    X = rep(1:20,50),
+    FUN =function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
+    globalVar=list(X=X,y=y),  #remember to mention the used global variables here
+    packages=c("randomForest"),  #packages required
+    user="sowe",max.nodes = 80)  #do not ask for more than 80 nodes, the system will not allow it.
+                                 #if you ask for 90 nodes, cluster will complete 80 and maybe run
+                                 #the remaining 10 jobs on ten nodes
+  })
+
+```
+
+
+To only run 20 models, takes ~50 times more time per model.
+```{r, echo=TRUE}
+X = data.frame(replicate(20,rnorm(1500)))
+y = with(X,X1*X2+X3)
+library(randomForest)
+system.time({
+out = lapply(
+  X = 1:20,
+FUN =function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1)
+)
+})
+```
+
