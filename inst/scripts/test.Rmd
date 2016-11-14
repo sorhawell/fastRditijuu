@@ -68,7 +68,6 @@ out = lply(X=1:250,FUN=function(x) x+1,
 *Notice that although there were 250 jobs, we only split the task on two nodes as starting more nodes would take too much time. Number of nodes is the euqal to number of jobs, unless limited to less by max.nodes.* 
 
 
-
 The **fastRditijuu** package provide on top of **BatchJobs** a seamless job array system, such that one node can complete several jobs before returning. Also, the package provide a global variable scoping, which allow the apply calls to written in generel fewer lines. E.g. one lapply call can itereate over sets of model parameters, the function would be a model function, and the data can be referred to in the global enviroment. Lets try this.
 
 
