@@ -8,13 +8,19 @@
 # remaining cells are arguments passed to function by do.call
 # function is executed and return value is saved to .Tempout.rda
 
-print("loading export")
-load(file="./.Tempexp.rda")
+print("Printing from R backend on server...")
 
-print("print export on server side")
-print(export)
+#get Tempdir.backend file path
+args = commandArgs(trailingOnly=TRUE)
+Tempdir.backend = args[1]
 
-print("check, install and load packages")
+cat("set backend work directory to: ",Tempdir.backend,"\n")
+setwd(Tempdir.backend)
+
+print("Loading exported variables ...")
+load(file="Tempexp.rda")
+
+print("Check, install and load packages...")
 list.of.packages <- export$packages
 #from http://stackoverflow.com/questions/4090169
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
@@ -22,43 +28,51 @@ if(length(new.packages)) install.packages(new.packages,repos="http://cran.us.r-p
 for(aPackage in list.of.packages) require(package=aPackage,character.only = T)
 
 
-# #check if fastRditijuu is installed on server
-# if(!"fastRditijuu" %in% installed.packages()[,"Package"]) {
-#   print("this seems to be first time, installing fastRditijuu on server")
-#   if("devtools" %in% installed.packages()[,"Package"]) {
-#     #devtools is available use that
-#     require(devtools)
-#     devtools::install_github("sorhawell/fastRditijuu")
-#   } else {
-#     #if devtools is not installed, don't mind we use minimal ghit instead
-#     install.packages("ghit",repos="http://cran.us.r-project.org")
-#     require("ghit")
-#     ghit::install_github("sorhawell/fastRditijuu")
-#   }
-# }
-# require("fastRditijuu")
-
+##preparation for starting slave nodes, only when using BatchJobs package
 if("package:BatchJobs" %in% search()) {
-  #source this wrapper
+
+  #save state of global variables, which can be read individually by slave nodes
+  if(length(export$globalVar)) {
+    cat("save file with these globalVariables",ls() ,"\n")
+    globalVar = export$globalVar
+    save(globalVar,file="globalVar.rda")
+  }
+
+  #source doBatchJob function on server side
+  #this wrapper is handling job-arrays (to split a list of jobs in separate job lists)
+  #...and global variables (loads an global variable state)
+  #...and combines individual slave node results into list of all results
   doBatchJob = function(
     X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
     #BatchJobs package only needs to be loaded on master node, not on slaves
 
-    #split jobs in to one pile for each node
+    #split jobs into one job-list for each node
     cluster.nodes = min(length(X),max.nodes) #no more nodes required than jobs
     jobArrays = suppressWarnings(split(X,1:cluster.nodes))
     splitKey  = unlist(suppressWarnings(split(1:length(X),1:cluster.nodes)),use.names = FALSE)
     invSplitKey = match(1:length(X),splitKey)
     #suppress warning, when nodes get ueven amount of jobs.
 
-    #Use BatchJobs package to create
+    #Meeseeks box(Rick & Morty reference) executer of job-lists
     wrapB = function(X,FUN,...) {
+      print("I'm Mr Meeseeks(a torque/PBS cluster slave), look at me!!!")
+      cat("Oh geee, my work directory is",getwd(),"\n")
+
       #load attach global vars on slave machine
-      load('.globalVar.rda')
-      attach(globalVar)
+      if(file.exists('globalVar.rda')) {
+        print("global variables detected, loading...")
+        load('globalVar.rda')
+        attach(globalVar)
+      }
+
       #run array of jobs on this slave
-      lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
+      print("Master: Mr Meeseeks, please iterate this job-list with lapply")
+      print("Mr Meeseeks: 'Sure can do!!'")
+      out = lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
+      print("Mr Meeseeks: Job completed, pooofff!!")
+      return(out)
     }
+
     reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L))
     save(reg,file="testBatchJobs-files/reg.rda")
     batchMap(reg,fun=wrapB,X=jobArrays,use.names=T,more.args = c(list(FUN=FUN,...)))
@@ -70,24 +84,9 @@ if("package:BatchJobs" %in% search()) {
     return(out)
   }
 
-  if(length(export$globalVar)) {
-    print(ls())
-    str(export)
-    globalVar = export$globalVar
-    save(globalVar,file=".globalVar.rda")
-  #write source file for slaves to load global variables
-    print("write .slaveSource.R file to")
-    print(getwd())
-    writeLines( text =
-"#source slave
-#if('.globalVar.rda' %in% list.files()) {
-  load('.globalVar.rda')
-  print('loading sorce')
-#} else {
-#  print('friendly warning: globalVar file not found, try execute slave without')",
-con = ".slaveSource.R")
 
-  }
+
+
 
 }
 
@@ -95,17 +94,16 @@ con = ".slaveSource.R")
 print("following packages loaded on master")
 print(search())
 
-print("do job")
-out = with(export$globalVar,{
-           print(ls())
 
+out = with(export$globalVar,{
+           print("following global variables exported to server side:")
+           print(ls())
+           print("calling the function")
            do.call(eval(export$what),export$arg,quote=T)
       })
-str(out)
+
 print("save output")
-saveRDS(out,file=".Tempout.rda")
+saveRDS(out,file="Tempout.rda")
 
 print("Hello Master, this is HAL 9000. Work completed, returning to local.")
 print(Sys.time())
-Sys.sleep(3)
-print("exit")
