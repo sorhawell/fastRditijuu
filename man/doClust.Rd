@@ -4,8 +4,9 @@
 \alias{doClust}
 \title{do.call with cluster as backend via ssh}
 \usage{
-doClust(what, arg = list(), user = "sowe", host = "login.gbar.dtu.dk",
-  packages = c(), Rscript = TRUE)
+doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
+  packages = c(), Rscript = TRUE, globalVar = list(),
+  sourceSupportFunctions = T)
 }
 \arguments{
 \item{what}{function or name of function to execute}

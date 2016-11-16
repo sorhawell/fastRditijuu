@@ -4,7 +4,17 @@
 \alias{doBatchJob}
 \title{Internal backend function to perform a qsub batchjob on server}
 \usage{
-doBatchJob(X, FUN, packages = c(), max.nodes = 24, ...)
+doBatchJob(X, FUN, packages = c(), max.nodes = 24, globalVar = list(),
+  ...)
+}
+\arguments{
+\item{X}{what to map}
+
+\item{FUN}{the function}
+
+\item{max.nodes}{number of max nodes}
+
+\item{global.var}{lsit with variables attached to global environment on each node}
 }
 \value{
 list with results of qsub batchjob

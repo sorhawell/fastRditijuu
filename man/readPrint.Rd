@@ -4,7 +4,7 @@
 \alias{readPrint}
 \title{Read Rout, useful if Rscript=FALSE to retrieve print}
 \usage{
-readPrint(hostString = "sowe@grid01.compute.dtu.dk",
+readPrint(hostString = "sowe@login.gbar.dtu.dk",
   printFile = "runOnServer.Rout")
 }
 \arguments{

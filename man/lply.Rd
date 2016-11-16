@@ -4,8 +4,9 @@
 \alias{lply}
 \title{Powerful lapply function with a qsub(Torque/PBS)-cluster as backend}
 \usage{
-lply(X, FUN, user = "sowe", host = "login.gbar.dtu.dk", Rscript = T,
-  packages = c(), max.nodes = 24, local = FALSE, ...)
+lply(X, FUN, user, host = "login.gbar.dtu.dk", Rscript = T,
+  packages = c(), max.nodes = 24, local = FALSE, globalVar = list(),
+  ...)
 }
 \arguments{
 \item{X}{object to map}
