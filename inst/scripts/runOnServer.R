@@ -13,8 +13,8 @@ print("Printing from R backend on server...")
 #get Tempdir.backend file path
 args = commandArgs(trailingOnly=TRUE)
 Tempdir.backend = args[1]
-
-cat("set backend work directory to: ",Tempdir.backend,"\n")
+print(args)
+# cat("set backend work directory to: ",Tempdir.backend,"\n")
 setwd(Tempdir.backend)
 
 print("Loading exported variables ...")
@@ -26,18 +26,12 @@ list.of.packages <- export$packages
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages,repos="http://cran.us.r-project.org")
 for(aPackage in list.of.packages) require(package=aPackage,character.only = T)
+print("following packages loaded on master")
+print(search())
 
 
 ##preparation for starting slave nodes, only when using BatchJobs package
 if("package:BatchJobs" %in% search()) {
-
-  #save state of global variables, which can be read individually by slave nodes
-  if(length(export$globalVar)) {
-    cat("save file with these globalVariables",ls() ,"\n")
-    globalVar = export$globalVar
-    save(globalVar,file="globalVar.rda")
-  }
-
   #source doBatchJob function on server side
   #this wrapper is handling job-arrays (to split a list of jobs in separate job lists)
   #...and global variables (loads an global variable state)
@@ -73,6 +67,7 @@ if("package:BatchJobs" %in% search()) {
       return(out)
     }
 
+    cluster.functions <- makeClusterFunctionsTorque("~/.fastRditijuu_qsub.tmpl")
     reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L))
     save(reg,file="testBatchJobs-files/reg.rda")
     batchMap(reg,fun=wrapB,X=jobArrays,use.names=T,more.args = c(list(FUN=FUN,...)))
@@ -84,23 +79,52 @@ if("package:BatchJobs" %in% search()) {
     return(out)
   }
 
+#place two config files in user root
+
+#   writeLines(text =
+# "# Torque/PBS cluster
+# cluster.functions <- makeClusterFunctionsTorque('~/.fastRditijuu_qsub.tmpl')",
+# con = "~/.BatchJobs.R"
+# )
+
+  writeLines(text =
+"#!/bin/sh
+
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=00:08:00
+
+echo $CPUTYPE
+
+#PBS -N <%= job.name %>
+## merge standard error and output
+#PBS -j oe
+## direct streams to our logfile
+#PBS -o <%= log.file %>
 
 
-
+## Run R:
+## we merge R output with stdout from PBS, which gets then logged via -o option
+R CMD BATCH --no-save --no-restore '<%= rscript %>' /dev/stdout
+",
+             con = "~/.fastRditijuu_qsub.tmpl"
+)
 
 }
 
+#save state of global variables, which can be read individually by slave nodes
+if(length(export$globalVar)) {
+  cat("save file with these globalVariables",ls() ,"\n")
+  globalVar = export$globalVar
+  save(globalVar,file="globalVar.rda")
+  attach(export$globalVar)
+  print("following global variables exported to server side:")
+  print(ls())
+} else {
+  print("no global variables exported to server side, use globalVar")
+}
 
-print("following packages loaded on master")
-print(search())
-
-
-out = with(export$globalVar,{
-           print("following global variables exported to server side:")
-           print(ls())
-           print("calling the function")
-           do.call(eval(export$what),export$arg,quote=T)
-      })
+print("calling the function")
+out = do.call(eval(export$what),export$arg,quote=T)
 
 print("save output")
 saveRDS(out,file="Tempout.rda")
