@@ -10,21 +10,57 @@
 #' @return value return by evaluated function
 #' @export
 #'
-doClust = function(what,arg=list(),user='sowe',host='login.gbar.dtu.dk',packages=c(),
+doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
                    Rscript=TRUE,globalVar=list(),sourceSupportFunctions=T) {
   if(!is.list(arg)) arg = list(arg)
 
   #server call#1 create tempoary directory on backend
   print("call server... make temp dir,")
   hostString = paste0(user,"@",host) #make ssh host string
-  tempDirCall = paste("ssh",hostString,"'source /etc/profile; mktemp -d ~/tmp/XXXXXXXXXXXX'")
-  Tempdir.backend = system(tempDirCall,intern = TRUE)
+  tempDirCall = paste(
+    "timeout 10 ssh",hostString, #ssh the server with 10 sec time out
+    "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
+
+  #make server call#1 one protected by time out and tryCatch
+  tryCatch({
+    Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
+  },
+  #if failing, make complete stop
+  error=function(e) stop("connection to host failed, check user name and rsa keys for ssh"))
+  #tryCatch(stop(e), error = function(e) e, finally = print("Hello"))
+
+  #get only last snip of server return
+  cat("message from server:",Tempdir.backend,sep="\n")
+  Tempdir.backend = tail(Tempdir.backend,1)
+  if(is.null(Tempdir.backend)) stop("no server response returned")
+
+  #check if satus was return instead of backend temp dir
+  if(!is.null(attr(Tempdir.backend,"status"))) {
+    status = attr(Tempdir.backend,"status")
+    if(status==124) stop("server didn't answer for 10 seconds, timeout, status 124
+server is either ignoring you or maybe host server is wrong or no internet")
+    if(status==255) stop("seems your login was unauthorized, check ssh keys and username, status 255")
+    stop(paste("unknown return status code:",status))
+  }
+  #silly test to gues if return is a valid path on backend
+  if(!is.character(Tempdir.backend)) {
+    stop(paste("server returns non-char temp path:",Tempdir.backend))
+  } else {
+
+    if(length(Tempdir.backend)==0 ||  #if empty
+    gregexpr(pattern="/",Tempdir.backend[1])[[1]][1]==-1){ #if no slash
+        stop(paste("server returns non-path (has no / in it ??):",Tempdir.backend))
+    }
+  }
+
+
+
 
   #save variables to Rdata file in temp directory on local machine
-  export = c(what=list(substitute(what)),packages=list(packages),
+  export = c(what=list(enquote(what)),packages=list(packages),
              arg=list(arg),globalVar=list(globalVar),Tempdir.backend=list(Tempdir.backend))
-  Tempdir.frontend = system("mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE) #temp directory on local machin
-  varFileName = "/Tempexp.rda"
+  Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE) #temp directory on local machin
+  varFileName = "Tempexp.rda"
   varPath.frontend = paste0(Tempdir.frontend,varFileName)
   cat("frontend Tempdir ",Tempdir.frontend,"\n")
   cat("backend  Tempdir ",Tempdir.backend ,"\n")
@@ -33,8 +69,9 @@ doClust = function(what,arg=list(),user='sowe',host='login.gbar.dtu.dk',packages
 
   #server call#2, push variables file to server
   varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
-                           Tempdir.backend,varFileName)
+                           Tempdir.backend,"/",varFileName)
   cat(" transfer variables,")
+
   system(varTransferCall)
 
   #server call#3, export executable R script
@@ -45,11 +82,20 @@ doClust = function(what,arg=list(),user='sowe',host='login.gbar.dtu.dk',packages
   system(scriptTransferCall)
 
   #server call#4, execute script
-  if(Rscript) program = "Rscript " else " R CMD BATCH "
-  executeCall = paste0('ssh ',hostString,' " source /etc/profile ; ',
-                       program,Tempdir.backend,"/",runFile," ",Tempdir.backend,'"')
+  program = if(Rscript) "Rscript" else paste0(
+"R CMD BATCH --no-save --no-restore \'--args ",Tempdir.backend,"\'")
+  suffix =  if(Rscript) paste0(" ",Tempdir.backend) else ""
+
+  executeCall = paste0('ssh ',hostString,
+    " \"",                         #start collection of lines
+    "source /etc/profile ; ",     #source profile script
+    "cd ",Tempdir.backend,"; ",   #change to backend temp dir
+    program," ./",runFile,suffix,        #execute runFile with Tempdir.backend as arg
+    " \"")
   cat(" execute! \n")
+  print(executeCall)
   system(executeCall)
+
 
   #server call #5, retrieve results
   cat("returning from server... fetch results from server,")
@@ -71,27 +117,44 @@ doClust = function(what,arg=list(),user='sowe',host='login.gbar.dtu.dk',packages
 
 #' Internal backend function to perform a qsub batchjob on server
 #' @import BatchJobs
+#' @param X what to map
+#' @param FUN the function
+#' @param max.nodes number of max nodes
+#' @param global.var lsit with variables attached to global environment on each node
 #' @return list with results of qsub batchjob
 #' @export
 #'
-doBatchJob = function(X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
+doBatchJob = function(
+  X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
   #BatchJobs package only needs to be loaded on master node, not on slaves
 
-  #split jobs in to one pile for each node
+  #split jobs into one job-list for each node
   cluster.nodes = min(length(X),max.nodes) #no more nodes required than jobs
   jobArrays = suppressWarnings(split(X,1:cluster.nodes))
   splitKey  = unlist(suppressWarnings(split(1:length(X),1:cluster.nodes)),use.names = FALSE)
   invSplitKey = match(1:length(X),splitKey)
   #suppress warning, when nodes get ueven amount of jobs.
 
-  #Use BatchJobs package to create
+  #Meeseeks box(Rick & Morty reference) executer of job-lists
   wrapB = function(X,FUN,...) {
+    print("I'm Mr Meeseeks(a torque/PBS cluster slave), look at me!!!")
+    cat("Oh geee, my work directory is",getwd(),"\n")
+
     #load attach global vars on slave machine
-    load('.globalVar.rda')
-    attach(globalVar)
+    if(file.exists('globalVar.rda')) {
+      print("global variables detected, loading...")
+      load('globalVar.rda')
+      attach(globalVar)
+    }
+
     #run array of jobs on this slave
-    lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
+    print("Master: Mr Meeseeks, please iterate this job-list with lapply")
+    print("Mr Meeseeks: 'Sure can do!!'")
+    out = lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
+    print("Mr Meeseeks: Job completed, pooofff!!")
+    return(out)
   }
+
   reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L))
   save(reg,file="testBatchJobs-files/reg.rda")
   batchMap(reg,fun=wrapB,X=jobArrays,use.names=T,more.args = c(list(FUN=FUN,...)))
@@ -117,7 +180,7 @@ doBatchJob = function(X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
 #'
 #' @return list of results
 #' @export
-lply = function(X, FUN, user="sowe", host="login.gbar.dtu.dk", Rscript=T,
+lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
                 packages=c(),max.nodes=24,local=FALSE,globalVar=list(),...) {
   if(local) {
     require("BatchJobs")
@@ -129,7 +192,9 @@ lply = function(X, FUN, user="sowe", host="login.gbar.dtu.dk", Rscript=T,
                                       packages=packages,...),
                   packages=packages,
                   Rscript=Rscript,
-                  globalVar=globalVar)
+                  globalVar=globalVar,
+                  user=user,
+                  host=host)
   }
   names(out) = names(X) #restore list naming
   return(out)
@@ -164,7 +229,7 @@ readPrint = function(hostString="sowe@login.gbar.dtu.dk",
 #' @return TRUE/1 if found and deleted
 #' @export
 #'
-cleanUp = function(user="sowe",host='login.gbar.dtu.dk') {
+cleanUp = function(user,host='login.gbar.dtu.dk') {
   doClust(function() system("rm -rf testBatchJobs-files"),
           arg=list(),user=user,host=host)
 }
