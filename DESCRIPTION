@@ -1,10 +1,10 @@
 Package: fastRditijuu
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.1
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
+Title: Easy cluster computing
+Version: 0.2.1
+Author: Søren H Welling, 2016
+Maintainer: Who to complain to <sorhawell@gmail.dk>
+Description: The package provides do.call and lapply-like functions with DTU Torque cluster as backend. Useful for all beginners or experienced programmers who want to map a function on the cluster in simple one liner command. The package requires a private-public RSA key set between local computer and host server.
 License: What license is it under?
 LazyData: TRUE
 RoxygenNote: 5.0.1
