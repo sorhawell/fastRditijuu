@@ -6,10 +6,21 @@ do.call(mean,list(1:7))     #local
 #hello cluster
 out = system("timeout 5 ssh sowe@login.gbar.dtu.dk ls",intern=T)
 
-doClust(mean,list(c(1:7)),user="sowe",host="grid01.compute.dtu.dk",Rscript = FALSE)  #on DTU cluster
-a=4
-doClust(function(x) x,list(c(1:7)),user="sowe",globalVar = list(a=a))  #on DTU cluster
+a=2
+ticket = doClust(function(x) x+a ,1:8,globalVar = list(a=a),
+                 user="sowe",async = T)
 
+result = getResult(ticket,user="sowe",verbose = T)
+
+
+doClust(mean,list(c(1:7)),user="sowe",host="grid01.compute.dtu.dk",Rscript = FALSE)  #on DTU cluster
+
+a=4
+doClust(function(x) x+a,list(c(1:7)),
+        user="sowe", globalVar = list(a=a), packages="AUC",async=FALSE)  #on DTU cluster
+doClust(remove.packages,"AUC",user="sowe",async = F)  #on DTU cluster
+
+out = lply(X=1:250,FUN=function(x) x+1,max.nodes=80,user="sowe")
 
 #run function that refer to an external variable, include variable in scope
 a=4
@@ -39,7 +50,12 @@ out = fastRditijuu:::doBatchJob(1:250,sum,max.nodes = 3)
 out = lapply(1:10, function(x) x+1)
 out = lply(X=1:250,FUN=sum,max.nodes=4,local=T)
 out = lply(X=1:250,FUN=function(x) x+1,max.nodes=20,user="sowe",host="grid01.compute.dtu.dk",Rscript = F)
-out = lply(X=1:250,FUN=function(x) x+1,max.nodes=10,user="sowe")
+cleanUp("sowe")
+a=42
+ticket = lply(X=1:250, FUN=function(x) x+a,
+              max.nodes=40, user="sowe", async=T,globalVar = list(a=a))
+result = getResult(ticket,user="sowe",verbose = TRUE)
+
 out = lply(X=1:250,FUN=function(x) x+1,max.nodes=80,user="sowe")
 
 a=1
@@ -51,6 +67,7 @@ model = doClust("randomForest",list(x=X,y=y,ntree=1000),packages="randomForest")
 library(randomForest)
 print(model)
 preds = predict(model,X)
+
 
 
 #try run 48 models
@@ -73,10 +90,11 @@ out = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rs
            globalVar=list(X=X,y=y),  #gotta mention global variables
            packages=c("randomForest"), #mention packages to be installed and/or loaded
            user="sowe",                #mention user name, remember to set up private/public key
-           host="grid02.compute.dtu.dk",Rscript=F,
+           #host="grid02.compute.dtu.dk",Rscript=F,
+           async = TRUE,
            max.nodes = 80)             #optional limit to certain number of nodes
                                        # ... do not set higher than 80.
-
+result = getResult(out,user="sowe",verbose = TRUE)
 
 plot(rep(1:24,50),unlist(out),col="#23232313",log="x")
 

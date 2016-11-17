@@ -6,7 +6,7 @@
 \usage{
 doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
   packages = c(), Rscript = TRUE, globalVar = list(),
-  sourceSupportFunctions = T)
+  sourceSupportFunctions = T, async = FALSE)
 }
 \arguments{
 \item{what}{function or name of function to execute}
@@ -20,6 +20,8 @@ doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
 \item{packages}{char vector of package names (can be empty)}
 
 \item{Rscript}{execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)}
+
+\item{async}{return after starting job? returned value is ticked to fetch result when job completed}
 }
 \value{
 value return by evaluated function

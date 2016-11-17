@@ -6,7 +6,7 @@
 \usage{
 lply(X, FUN, user, host = "login.gbar.dtu.dk", Rscript = T,
   packages = c(), max.nodes = 24, local = FALSE, globalVar = list(),
-  ...)
+  async = F, ...)
 }
 \arguments{
 \item{X}{object to map}
@@ -24,6 +24,10 @@ lply(X, FUN, user, host = "login.gbar.dtu.dk", Rscript = T,
 \item{max.nodes}{maximum nodes reuired, do not set higher than 80}
 
 \item{local}{should the lply run on local computer (only for debugging/testing)}
+
+\item{globalVar}{list of global variables}
+
+\item{async}{true/false, if torun lply loop asynchronously}
 
 \item{...}{}
 }
