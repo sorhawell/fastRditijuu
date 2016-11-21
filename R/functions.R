@@ -286,3 +286,39 @@ cleanUp = function(user,host='login.gbar.dtu.dk',printCols=3) {
 }
 
 
+#' Clean up for temp files
+#' @param user server to read from
+#' @param host  print file to read
+#' @param host  print file to read
+#'
+#' @return TRUE/1 if found and deleted
+#' @export
+#'
+exchangeRSAkeys = function(
+  user,host,
+  server.ssh.pub.file = "~/.ssh/authorized_keys",
+  keyName = "fastRditijuu") {
+
+  system(paste0("
+cd ~/
+if [ -d '.ssh' ]
+then
+    echo '.ssh folder found, placing private key'
+
+else
+    echo 'Create folder'
+    mkdir ~/.ssh
+    chmod 700 ~/.ssh
+fi
+cd ~/.ssh
+ssh-keygen -t rsa -f ",keyName," -N ''"))
+
+pubKey = readLines(paste0(con="~/.ssh/",keyName,".pub"))
+print("to send public key to server, copy, paste and run this line in terminal")
+cat("\n")
+cat(paste0("ssh ",user,"@",host,
+              " \" mkdir -p ~/.ssh;",
+              "echo \'",pubKey,"\' >> ",server.ssh.pub.file,"\""))
+
+
+}

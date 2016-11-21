@@ -3,6 +3,7 @@
 export(cleanUp)
 export(doBatchJob)
 export(doClust)
+export(exchangeRSAkeys)
 export(getResult)
 export(lply)
 export(readPrint)
