@@ -4,6 +4,7 @@
 #' @param arg arguments for function
 #' @param user username
 #' @param host server (will connect to user@server)
+#' @param keyPath specifiy file and path for private key, if NULL non or system default.
 #' @param packages char vector of package names (can be empty)
 #' @param Rscript execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)
 #' @param async return after starting job? returned value is ticked to fetch result when job completed
@@ -14,11 +15,11 @@
 #' @return value return by evaluated function
 #' @export
 #'
-doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
+doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,packages=c(),
                    Rscript=TRUE,globalVar=list(),async=FALSE,
                    qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs) {
   if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
-
+  keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
   if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH" #check OS
 
   #temp directory on local machin
@@ -36,7 +37,7 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
   hostString = paste0(user,"@",host) #make ssh host string
   if(lang=="bash") {
     tempDirCall = paste(
-      "timeout 15 ssh",hostString, #ssh the server with 10 sec time out
+      "timeout 15 ssh",hostString,keyPath, #ssh the server with 10 sec time out
       "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
   } else {
     path_maketemp = paste0(Tempdir.frontend,"\\putty_maketemp.txt")
@@ -46,7 +47,7 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
     hostString  = "login.gbar.dtu.dk"
     user = "sowe"
     tempDirCall = paste0(
-      "putty -ssh ",hostString," -l ",user," -m ",path_maketemp
+      "Plink -ssh ",hostString," -l ",user," -m ",path_maketemp
     ) #ssh the server with 10 sec time out
     shell(tempDirCall)
     return("success")
