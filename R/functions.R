@@ -231,12 +231,12 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
 
 #' Read Rout, useful if Rscript=FALSE to retrieve print
 #'
-#' @param ticket
-#' @param user
-#' @param host
-#' @param vebose
+#' @param ticket the out object from lply or doClust when call with async=TRUE
+#' @param user username on server
+#' @param host server host address
+#' @param verbose if TRUE, prints from R master, can be used to monitor progress and debugging
 #'
-#' @return
+#' @return Either the result of a finished job, or if not complete yet, then a ticket like object
 #' @export
 #'
 getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
