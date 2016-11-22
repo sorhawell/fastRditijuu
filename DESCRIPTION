@@ -1,11 +1,10 @@
 Package: fastRditijuu
 Type: Package
 Title: Easy cluster computing
-Version: 0.2.2
+Version: 0.2.3
 Author: Søren H Welling, 2016
 Maintainer: Who to complain to <sorhawell@gmail.dk>
-Description: The package provides do.call and lapply-like functions with DTU Torque cluster as backend. Useful for all beginners or experienced programmers who want to map a function on the cluster in simple one liner command. The package requires a private-public RSA key set between local computer and host server.
+Description: The package provides do.call and lapply-like functions with DTU Torque cluster as backend. Useful for all beginners or experienced programmers who want to map a function on the cluster in simple one liner command. The package requires a private-public RSA key set between local computer and host server. The server side will require the BatchJobs package.
 License: What license is it under?
 LazyData: TRUE
 RoxygenNote: 5.0.1
-Imports: BatchJobs
