@@ -5,15 +5,19 @@ do.call(mean,list(1:7))     #local
 
 #hello cluster
 out = system("timeout 5 ssh sowe@login.gbar.dtu.dk ls",intern=T)
-
 a=2
-ticket = doClust(function(x) x+a ,1:8,globalVar = list(a=a),
-                 user="sowe",async = T)
+out = doClust(function(x) x+a ,1:8, globalVar = list(a=a),user="sowe",async = T,qsub.walltime="00:10:00")
+result = getResult(out,user="sowe",verbose = T)
+cleanUp(user="sowe")
 
+ticket = doClust(function(x) {Sys.sleep(120);'blop'} ,1:8,
+                 globalVar = list(a=a),user="sowe",async = T,qsub.walltime="00:00:10")
 result = getResult(ticket,user="sowe",verbose = T)
 
 
-doClust(mean,list(c(1:7)),user="sowe",host="grid01.compute.dtu.dk",Rscript = FALSE)  #on DTU cluster
+ticket2 = doClust(function(x) {Sys.sleep(120);'blop'} ,1:8,
+                 globalVar = list(a=a),user="sowe",async = T,walltime="00:00:55")
+result = getResult(ticket2,user="sowe",verbose = T)
 
 a=4
 doClust(function(x) x+a,list(c(1:7)),
@@ -56,48 +60,36 @@ ticket = lply(X=1:250, FUN=function(x) x+a,
               max.nodes=40, user="sowe", async=T,globalVar = list(a=a))
 result = getResult(ticket,user="sowe",verbose = TRUE)
 
-out = lply(X=1:250,FUN=function(x) x+1,max.nodes=80,user="sowe")
+out = lply(X=1:250,FUN=function(x) x+1,max.nodes=12,user="sowe")
 
 a=1
-out = lply(X=1:250,FUN=function(x) x+a,max.nodes=2,globalVar = list(a=a))
+out = lply(X=1:250,FUN=function(x) x+a,max.nodes=2,globalVar = list(a=a),user="sowe",async=T)
+result = getResult(out,user="sowe",verbose = T)
 
-#try run single model
-
-model = doClust("randomForest",list(x=X,y=y,ntree=1000),packages="randomForest")  #on DTU cluster
-library(randomForest)
-print(model)
-preds = predict(model,X)
+a=1
+out = lply(X=list(a=2,b=3,c=5),FUN=function(x) x+a,max.nodes=2,globalVar = list(a=a),user="sowe",async=T)
+result = getResult(out,user="sowe",verbose = T)
 
 
 
-#try run 48 models
+#try run iterate 1200 RF models asynchonously with lply
 library("fastRditijuu")
-library(randomForest)
-X = data.frame(replicate(24,rnorm(500)))
+X = data.frame(replicate(24,rnorm(2500)))
 y = apply(X[,1:3],1,sum)
 X[] = X[1:3]
 X[] = X[] + rnorm(500*24)
 
-myFunc =  function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1)
-
-#run 10 times local
-out = lapply(X=rep(1:5,2),FUN=myFunc)
-plot(rep(1:5,2),out)
-
 #run 1000 times on cluster
-out = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
+ticket = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
            #that extra stuff you need to mention
            globalVar=list(X=X,y=y),  #gotta mention global variables
            packages=c("randomForest"), #mention packages to be installed and/or loaded
            user="sowe",                #mention user name, remember to set up private/public key
            #host="grid02.compute.dtu.dk",Rscript=F,
            async = TRUE,
-           max.nodes = 80)             #optional limit to certain number of nodes
+           max.nodes = 78,
+           qsub.walltime = "00:15:00",
+           qsub.proc = 1)             #optional limit to certain number of nodes
                                        # ... do not set higher than 80.
-result = getResult(out,user="sowe",verbose = TRUE)
-
-plot(rep(1:24,50),unlist(out),col="#23232313",log="x")
-
-out = fastRditijuu:::doBatchJob(1:15,function(mtry) mtry+1,
-                                X=X,y=y,packages="randomForest")
-lapply(out,class)
+result = getResult(ticket,user="sowe",verbose = TRUE)
+plot(rep(1:24,50),unlist(result),col="#23232313",log="x")
