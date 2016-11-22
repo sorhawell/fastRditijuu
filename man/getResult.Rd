@@ -7,7 +7,16 @@
 getResult(ticket, user, host = "login.gbar.dtu.dk", verbose = F)
 }
 \arguments{
-\item{vebose}{}
+\item{ticket}{the out object from lply or doClust when call with async=TRUE}
+
+\item{user}{username on server}
+
+\item{host}{server host address}
+
+\item{verbose}{if TRUE, prints from R master, can be used to monitor progress and debugging}
+}
+\value{
+Either the result of a finished job, or if not complete yet, then a ticket like object
 }
 \description{
 Read Rout, useful if Rscript=FALSE to retrieve print

@@ -5,8 +5,9 @@
 \title{do.call with cluster as backend via ssh}
 \usage{
 doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
-  packages = c(), Rscript = TRUE, globalVar = list(), async = FALSE,
-  qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1)
+  keyPath = NULL, packages = c(), Rscript = TRUE, globalVar = list(),
+  async = FALSE, qsub.walltime = "00:09:00", qsub.proc = 1,
+  qsub.nodes = 1, qsub.moreArgs)
 }
 \arguments{
 \item{what}{function or name of function to execute}
@@ -16,6 +17,8 @@ doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
 \item{user}{username}
 
 \item{host}{server (will connect to user@server)}
+
+\item{keyPath}{specifiy file and path for private key, if NULL non or system default.}
 
 \item{packages}{char vector of package names (can be empty)}
 
