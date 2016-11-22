@@ -7,22 +7,31 @@
 #' @param packages char vector of package names (can be empty)
 #' @param Rscript execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)
 #' @param async return after starting job? returned value is ticked to fetch result when job completed
+#' @param qsub.walltime only relevant for async=T or lply, job time limit on Torque('qsub')-cluster
+#' @param qsub.proc how many processes to ask for per job, 1 unless using doParallel etc.
+#' @param qsub.nodes how many nodes to ask for per job, leave unchanged if in doubt
 #'
 #' @return value return by evaluated function
 #' @export
 #'
 doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
-                   Rscript=TRUE,globalVar=list(),sourceSupportFunctions=T,async=FALSE) {
+                   Rscript=TRUE,globalVar=list(),async=FALSE,
+                   qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs) {
   if(!is.list(arg)) arg = list(arg)
+
+  if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH"
+  if(lang=="BATCH") stop("sorry this package do not support Windows yet")
 
   #server call#1 create tempoary directory on backend
   thisVersion = installed.packages()[installed.packages()[,"Package"]=="fastRditijuu","Version"]
   cat("this is fastRditijuu version: ", thisVersion , "\n")
   print("call server... make temp dir,")
   hostString = paste0(user,"@",host) #make ssh host string
-  tempDirCall = paste(
-    "timeout 10 ssh",hostString, #ssh the server with 10 sec time out
-    "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
+  if(lang=="bash") {
+    tempDirCall = paste(
+      "timeout 15 ssh",hostString, #ssh the server with 10 sec time out
+      "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
+  }
 
   #make server call#1 one protected by time out and tryCatch
   tryCatch({
@@ -56,13 +65,13 @@ server is either ignoring you or maybe host server is wrong or no internet")
     }
   }
 
-
-
-
   #save variables to Rdata file in temp directory on local machine
   export = c(what=list(enquote(what)),packages=list(packages),
              arg=list(arg),globalVar=list(globalVar),Tempdir.backend=list(Tempdir.backend),
-             async=list(async))
+             async=list(async),
+             qsub.walltime = list(qsub.walltime),
+             qsub.proc     = list(qsub.proc),
+             qsub.nodes    = list(qsub.nodes))
   Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE) #temp directory on local machin
   varFileName = "Tempexp.rda"
   varPath.frontend = paste0(Tempdir.frontend,varFileName)
@@ -72,16 +81,24 @@ server is either ignoring you or maybe host server is wrong or no internet")
   save(export, file=varPath.frontend)
 
   #server call#2, push variables file to server
-  varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
-                           Tempdir.backend,"/",varFileName)
+  if(lang=="bash") {
+    varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
+                             Tempdir.backend,"/",varFileName)
+  } else {
+    stop("not supported yet")
+  }
   cat(" transfer variables,")
-
   system(varTransferCall)
 
   #server call#3, export executable R script
   runFile = 'runOnServer.R'
   scriptPath = system.file(paste0("/scripts/",runFile),package="fastRditijuu")
-  scriptTransferCall = paste0("scp ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+
+  if(lang=="bash") {
+    scriptTransferCall = paste0("scp ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+  } else {
+    stop("not supported yet")
+  }
   cat(" transfer executable,")
   system(scriptTransferCall)
 
@@ -90,12 +107,16 @@ server is either ignoring you or maybe host server is wrong or no internet")
 "R CMD BATCH --no-save --no-restore \'--args ",Tempdir.backend,"\'")
   suffix =  if(Rscript) paste0(" ",Tempdir.backend) else ""
 
-  executeCall = paste0('ssh ',hostString,
-    " \"",                         #start collection of lines
-    "source /etc/profile ; ",     #source profile script
-    "cd ",Tempdir.backend,"; ",   #change to backend temp dir
-    program," ./",runFile,suffix,        #execute runFile with Tempdir.backend as arg
-    " \"")
+  if(lang=="bash") {
+    executeCall = paste0('ssh ',hostString,
+      " \"",                         #start collection of lines
+      "source /etc/profile ; ",     #source profile script
+      "cd ",Tempdir.backend,"; ",   #change to backend temp dir
+      program," ./",runFile,suffix,        #execute runFile with Tempdir.backend as arg
+      " \"")
+  } else {
+    stop("not supported yet")
+  }
   cat(" execute! \n")
   print(executeCall)
   system(executeCall)
@@ -105,76 +126,33 @@ server is either ignoring you or maybe host server is wrong or no internet")
 
     cat("returning from server...")
     outFile = "Tempout.rda"
-    retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
-                                            "  ",Tempdir.frontend,"/",outFile)
+    if(lang=="bash") {
+      retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
+                                              "  ",Tempdir.frontend,"/",outFile)
+    } else {
+      stop("not supprted yet")
+    }
+
     system(retrieveCall)
     cat("  read results,")
     out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
+
     cat(" delete local temp files,")
-    system(paste0("rm -rf ",Tempdir.frontend))
+    system(if(lang=="bash") {paste0("rm -rf ",Tempdir.frontend)} else {stop("not supported yet")})
 
     if(!async) {
-    cat(" delete backend temp files,")
-    system(paste0("ssh ",hostString," rm -rf ",Tempdir.backend))
-  } else {
-    cat("keep backend temp... return job ticket,")
-  }
-
-
-
-  cat(" Finito...\n")
-  return(out)
-}
-
-
-#' Internal backend function to perform a qsub batchjob on server
-#' @import BatchJobs
-#' @param X what to map
-#' @param FUN the function
-#' @param max.nodes number of max nodes
-#' @param global.var lsit with variables attached to global environment on each node
-#' @return list with results of qsub batchjob
-#' @export
-#'
-doBatchJob = function(
-  X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
-  #BatchJobs package only needs to be loaded on master node, not on slaves
-
-  #split jobs into one job-list for each node
-  cluster.nodes = min(length(X),max.nodes) #no more nodes required than jobs
-  jobArrays = suppressWarnings(split(X,1:cluster.nodes))
-  splitKey  = unlist(suppressWarnings(split(1:length(X),1:cluster.nodes)),use.names = FALSE)
-  invSplitKey = match(1:length(X),splitKey)
-  #suppress warning, when nodes get ueven amount of jobs.
-
-  #Meeseeks box(Rick & Morty reference) executer of job-lists
-  wrapB = function(X,FUN,...) {
-    print("I'm Mr Meeseeks(a torque/PBS cluster slave), look at me!!!")
-    cat("Oh geee, my work directory is",getwd(),"\n")
-
-    #load attach global vars on slave machine
-    if(file.exists('globalVar.rda')) {
-      print("global variables detected, loading...")
-      load('globalVar.rda')
-      attach(globalVar)
+      cat(" delete backend temp files,")
+      system(if(lang=="bash") {
+          paste0("ssh ",hostString," rm -rf ",Tempdir.backend)
+        } else {
+          stop("not supported yet")
+      })
+    } else {
+      cat("keep backend temp... return job ticket,")
     }
 
-    #run array of jobs on this slave
-    print("Master: Mr Meeseeks, please iterate this job-list with lapply")
-    print("Mr Meeseeks: 'Sure can do!!'")
-    out = lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
-    print("Mr Meeseeks: Job completed, pooofff!!")
-    return(out)
-  }
-
-  reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L))
-  save(reg,file="testBatchJobs-files/reg.rda")
-  batchMap(reg,fun=wrapB,X=jobArrays,use.names=T,more.args = c(list(FUN=FUN,...)))
-  submitJobs(reg)
-  waitForJobs(reg)
-  out = unlist(loadResults(reg,1:cluster.nodes),recursive = FALSE)
-  out = out[invSplitKey] #re-order jobs by inverted splitKey
-  removeRegistry(reg,ask="no")
+  cat(" Finito...\n")
+  if(async) class(out) = "ticket"
   return(out)
 }
 
@@ -186,32 +164,50 @@ doBatchJob = function(
 #' @param host server adress (will be combined as user@host)
 #' @param Rscript if true verbose, however only supported by gbar, nor compute.cluster
 #' @param packages required packages on server
-#' @param max.nodes maximum nodes reuired, do not set higher than 80
+#' @param max.nodes maximum nodes reuired, do not set higher than 80 (79 if async=T)
 #' @param local should the lply run on local computer (only for debugging/testing)
 #' @param globalVar list of global variables
-#' @param async true/false, if torun lply loop asynchronously
+#' @param async true/false, if to run lply loop asynchronously
+#' @param qsub.walltime change wall time qsub, will apply to both master and slaves
+#' @param qsub.proc how many processes to ask for per job, 1 unless using doParallel etc.
+#' @param qsub.nodes how many nodes to ask for per job, leave unchanged if in doubt
 #' @param ...
 #'
 #' @return list of results
 #' @export
 lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
-                packages=c(),max.nodes=24,local=FALSE,globalVar=list(),async=F,...) {
+                packages=c(),max.nodes=24,local=FALSE,globalVar=list(),async=F,
+                qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,...) {
   if(local) {
-    require("BatchJobs")
-    out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,
-                                            globalVar=globalVar,...))
+    # require("BatchJobs")
+    # out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,
+    #                                         globalVar=globalVar,...))
+    print("local is not supported anymore")
+    return(1)
   } else {
     packages = unique(c(packages,"BatchJobs")) #include BatchJobs package on server
-    out = doClust(doBatchJob,arg=list(X=X,FUN=FUN,max.nodes=max.nodes,
-                                      packages=packages,...),
-                  packages=packages,
-                  Rscript=Rscript,
-                  globalVar=globalVar,
-                  user=user,
-                  host=host,
-                  async,async)
+    out = doClust('doBatchJob',
+      arg=list(
+        X=X,
+        FUN=FUN,
+        max.nodes=max.nodes,
+        packages=packages,
+        ...),
+    packages  = packages,
+    Rscript   = Rscript,
+    globalVar = globalVar,
+    user      = user,
+    host      = host,
+    async     = async,
+    qsub.walltime = qsub.walltime,
+    qsub.proc     = qsub.proc,
+    qsub.nodes    = qsub.nodes)
   }
-  names(out) = names(X) #restore list naming
+  if(!async) {
+    names(out) = names(X) #restore list naming
+  } else {
+    out$names = names(X)
+  }
   return(out)
 }
 
@@ -226,26 +222,38 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
 #' @export
 #'
 getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
-  Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
-  Tempdir.backend = ticket[[1]] #ticket$backend.tmp
-  hostString = paste(user,host,sep="@")
-  cat("returning from server...")
-  outFile = "Tempout.rda"
-  retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
-                        "  ",Tempdir.frontend,"/",outFile)
-  system(retrieveCall)
-  cat("  read results,")
+  if(class(ticket)=="ticket") {
+    Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
+    Tempdir.backend = ticket[[1]] #ticket$backend.tmp
+    hostString = paste(user,host,sep="@")
+    cat("returning from server...")
+    outFile = "Tempout.rda"
+    retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
+                          "  ",Tempdir.frontend,"/",outFile)
+    status = system(retrieveCall,intern=T)
+    if(!is.null(attr(status,"status")) && attr(status,"status")!=0) {
+      system(paste0("rm -rf ",Tempdir.frontend))
+      stop("failed to locate result")
+    }
+    cat("  read results,")
 
 
-  if(verbose) system(paste0(
-    "ssh ",hostString," less ",
-    Tempdir.backend,
-    "/fastRditijuu_qsub_async.sh.o",
-     substr(ticket[[2]],1,7)
-  ))
+    if(verbose) system(paste0(
+      "ssh ",hostString," less ",
+      Tempdir.backend,
+      "/fastRditijuu_qsub_async.sh.o",
+       substr(ticket[[2]],1,7)
+    ))
 
-  out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
-
+    out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
+    if(class(out)=="ticket") cat("\n job has not finshed yet, ask again later")
+    system(paste0("rm -rf ",Tempdir.frontend))
+    names(out) = ticket$names
+    return(out)
+  } else {
+    print("this seems not to be a valid ticket")
+    return(ticket)
+  }
 }
 
 
