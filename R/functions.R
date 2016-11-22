@@ -20,7 +20,7 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
   if(!is.list(arg)) arg = list(arg)
 
   if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH"
-  if(lang=="BATCH") stop("sorry this package do not support Windows yet")
+  if(lang=="BATCH") stop("sorry this package does not support Windows yet")
 
   #server call#1 create tempoary directory on backend
   thisVersion = installed.packages()[installed.packages()[,"Package"]=="fastRditijuu","Version"]
@@ -123,7 +123,6 @@ server is either ignoring you or maybe host server is wrong or no internet")
 
 
   #server call #5, retrieve results
-
     cat("returning from server...")
     outFile = "Tempout.rda"
     if(lang=="bash") {
