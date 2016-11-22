@@ -17,10 +17,17 @@
 doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
                    Rscript=TRUE,globalVar=list(),async=FALSE,
                    qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs) {
-  if(!is.list(arg)) arg = list(arg)
+  if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
 
-  if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH"
-  if(lang=="BATCH") stop("sorry this package does not support Windows yet")
+  if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH" #check OS
+
+  #temp directory on local machin
+  if(lang=="BATCH") {
+    #stop("sorry this package does not support Windows yet")
+    Tempdir.frontend = tempdir()
+  } else {
+    Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
+  }
 
   #server call#1 create tempoary directory on backend
   thisVersion = installed.packages()[installed.packages()[,"Package"]=="fastRditijuu","Version"]
@@ -31,6 +38,18 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',packages=c(),
     tempDirCall = paste(
       "timeout 15 ssh",hostString, #ssh the server with 10 sec time out
       "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
+  } else {
+    path_maketemp = paste0(Tempdir.frontend,"\\putty_maketemp.txt")
+    writeLines(
+      "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'", #source profile and create temp dir
+      con=path_maketemp)
+    hostString  = "login.gbar.dtu.dk"
+    user = "sowe"
+    tempDirCall = paste0(
+      "putty -ssh ",hostString," -l ",user," -m ",path_maketemp
+    ) #ssh the server with 10 sec time out
+    shell(tempDirCall)
+    return("success")
   }
 
   #make server call#1 one protected by time out and tryCatch
@@ -72,7 +91,6 @@ server is either ignoring you or maybe host server is wrong or no internet")
              qsub.walltime = list(qsub.walltime),
              qsub.proc     = list(qsub.proc),
              qsub.nodes    = list(qsub.nodes))
-  Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE) #temp directory on local machin
   varFileName = "Tempexp.rda"
   varPath.frontend = paste0(Tempdir.frontend,varFileName)
   cat("frontend Tempdir ",Tempdir.frontend,"\n")
@@ -245,7 +263,7 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
     ))
 
     out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
-    if(class(out)=="ticket") cat("\n job has not finshed yet, ask again later")
+    if(class(out)=="ticket") cat(" job has not finshed yet, ask again later") else cat(" job's done!")
     system(paste0("rm -rf ",Tempdir.frontend))
     names(out) = ticket$names
     return(out)
