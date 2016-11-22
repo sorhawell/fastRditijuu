@@ -5,8 +5,8 @@
 \title{do.call with cluster as backend via ssh}
 \usage{
 doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
-  packages = c(), Rscript = TRUE, globalVar = list(),
-  sourceSupportFunctions = T, async = FALSE)
+  packages = c(), Rscript = TRUE, globalVar = list(), async = FALSE,
+  qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1)
 }
 \arguments{
 \item{what}{function or name of function to execute}
@@ -22,6 +22,12 @@ doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
 \item{Rscript}{execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)}
 
 \item{async}{return after starting job? returned value is ticked to fetch result when job completed}
+
+\item{qsub.walltime}{only relevant for async=T or lply, job time limit on Torque('qsub')-cluster}
+
+\item{qsub.proc}{how many processes to ask for per job, 1 unless using doParallel etc.}
+
+\item{qsub.nodes}{how many nodes to ask for per job, leave unchanged if in doubt}
 }
 \value{
 value return by evaluated function

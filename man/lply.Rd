@@ -6,7 +6,8 @@
 \usage{
 lply(X, FUN, user, host = "login.gbar.dtu.dk", Rscript = T,
   packages = c(), max.nodes = 24, local = FALSE, globalVar = list(),
-  async = F, ...)
+  async = F, qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1,
+  ...)
 }
 \arguments{
 \item{X}{object to map}
@@ -21,13 +22,19 @@ lply(X, FUN, user, host = "login.gbar.dtu.dk", Rscript = T,
 
 \item{packages}{required packages on server}
 
-\item{max.nodes}{maximum nodes reuired, do not set higher than 80}
+\item{max.nodes}{maximum nodes reuired, do not set higher than 80 (79 if async=T)}
 
 \item{local}{should the lply run on local computer (only for debugging/testing)}
 
 \item{globalVar}{list of global variables}
 
-\item{async}{true/false, if torun lply loop asynchronously}
+\item{async}{true/false, if to run lply loop asynchronously}
+
+\item{qsub.walltime}{change wall time qsub, will apply to both master and slaves}
+
+\item{qsub.proc}{how many processes to ask for per job, 1 unless using doParallel etc.}
+
+\item{qsub.nodes}{how many nodes to ask for per job, leave unchanged if in doubt}
 
 \item{...}{}
 }
