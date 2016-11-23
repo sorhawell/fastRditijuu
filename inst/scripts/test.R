@@ -2,12 +2,14 @@ library("fastRditijuu")
 mean(1:7)
 do.call(mean,list(1:7))     #local
 
+doClust(1:10,mean,"sowe")
+
 
 #hello cluster
 out = system("timeout 5 ssh sowe@login.gbar.dtu.dk ls",intern=T)
 a=2
 out = doClust(function(x) x+a ,1:8, globalVar = list(a=a),user="sowe",async = T,qsub.walltime="00:10:00")
-result = getResult(out,user="sowe",verbose = F)
+result = getResult(out,user="sowe",verbose = T)
 cleanUp(user="sowe")
 
 ticket = doClust(function(x) {Sys.sleep(120);'blop'} ,1:8,

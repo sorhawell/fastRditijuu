@@ -20,12 +20,16 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
                    qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs) {
   if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
   keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
-  if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH" #check OS
+  lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
 
   #temp directory on local machin
   if(lang=="BATCH") {
-    #stop("sorry this package does not support Windows yet")
+
     Tempdir.frontend = tempdir()
+    tempFolder = shell("echo %TEMP%",intern=TRUE)
+    Tempdir.frontend = paste0(tempFolder,"\\",
+                      paste(sample(c(letters,LETTERS),12),collapse=""))
+    shell(paste("mkdir",Tempdir.frontend))
   } else {
     Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
   }
@@ -53,12 +57,11 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
 
   #make server call#1 one protected by time out and tryCatch
   print(tempDirCall)
-  if(readline("stop ? y/n") == "y") return("stopping")
   tryCatch({
     if(lang=="bash") {
       Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
     }else {
-      Tempdir.backend = shell(tempDirCall)
+      Tempdir.backend = shell(tempDirCall,intern = TRUE)
 #      return("success")
     }
   },
@@ -105,34 +108,39 @@ server is either ignoring you or maybe host server is wrong or no internet")
   save(export, file=varPath.frontend)
 
   #server call#2, push variables file to server
+  cat(" transfer variables,")
   if(lang=="bash") {
     varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
                              Tempdir.backend,"/",varFileName)
+    system(varTransferCall)
   } else {
     varTransferCall = paste0("PSCP  ",varPath.frontend," ",hostString,":",
                              Tempdir.backend,"/",varFileName)
-    return("success2")
+    print(varTransferCall)
+    shell(varTransferCall)
   }
-  cat(" transfer variables,")
-  system(varTransferCall)
+
+
 
   #server call#3, export executable R script
   runFile = 'runOnServer.R'
   scriptPath = system.file(paste0("/scripts/",runFile),package="fastRditijuu")
-
+  cat(" transfer executable,")
   if(lang=="bash") {
     scriptTransferCall = paste0("scp ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+    system(scriptTransferCall)
   } else {
-    stop("not supported yet")
+    scriptTransferCall = paste0("PSCP ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+    shell(scriptTransferCall)
   }
-  cat(" transfer executable,")
-  system(scriptTransferCall)
+
+
 
   #server call#4, execute script
   program = if(Rscript) "Rscript" else paste0(
 "R CMD BATCH --no-save --no-restore \'--args ",Tempdir.backend,"\'")
   suffix =  if(Rscript) paste0(" ",Tempdir.backend) else ""
-
+  cat(" execute! \n")
   if(lang=="bash") {
     executeCall = paste0('ssh ',hostString,
       " \"",                         #start collection of lines
@@ -140,12 +148,19 @@ server is either ignoring you or maybe host server is wrong or no internet")
       "cd ",Tempdir.backend,"; ",   #change to backend temp dir
       program," ./",runFile,suffix,        #execute runFile with Tempdir.backend as arg
       " \"")
+    print(executeCall)
+    system(executeCall)
   } else {
-    stop("not supported yet")
+    path_runfile = paste0(Tempdir.frontend,"/putty_runFile.txt")
+    backend.bashcall = paste0(
+      "source /etc/profile", "\n",     #source profile script
+      "cd ",Tempdir.backend, "\n",   #change to backend temp dir
+      program," ",runFile," ",suffix, "\n")
+    writeLines(backend.bashcall,con = path_runfile)
+    executeCall = paste0('Plink -ssh ',host," -l ",user," -m ",path_runfile)
+    print(executeCall)
+    shell(executeCall)
   }
-  cat(" execute! \n")
-  print(executeCall)
-  system(executeCall)
 
 
   #server call #5, retrieve results
@@ -154,26 +169,43 @@ server is either ignoring you or maybe host server is wrong or no internet")
     if(lang=="bash") {
       retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
                                               "  ",Tempdir.frontend,"/",outFile)
+      system(retrieveCall)
     } else {
-      stop("not supprted yet")
+      retrieveCall = paste0("PSCP ", hostString,":",Tempdir.backend ,"/",outFile,
+                            "  ",Tempdir.frontend,"/",outFile)
+      print(retrieveCall)
+      shell(retrieveCall)
     }
 
-    system(retrieveCall)
     cat("  read results,")
     out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
 
-    cat(" delete local temp files,")
-    system(if(lang=="bash") {paste0("rm -rf ",Tempdir.frontend)} else {stop("not supported yet")})
-
     if(!async) {
       cat(" delete backend temp files,")
-      system(if(lang=="bash") {
-          paste0("ssh ",hostString," rm -rf ",Tempdir.backend)
+      if(lang=="bash") {
+          delCall.backend = paste0("ssh ",hostString," rm -rf ",Tempdir.backend)
+          print(delCall.backend)
+          system(delCall.backend)
         } else {
-          stop("not supported yet")
-      })
+          path_delBeckendTemp = paste0(Tempdir.frontend,"/putty_delBackendTemp.txt")
+          delCall_string = paste0("rm -rf ",Tempdir.backend)
+          writeLines(delCall_string,con=path_delBeckendTemp)
+          delCall.backend = paste0("Plink -ssh ",hostString, " -m ",path_delBeckendTemp)
+          print(delCall.backend)
+          print(delCall_string)
+          shell(delCall.backend)
+      }
     } else {
       cat("keep backend temp... return job ticket,")
+    }
+
+    cat(" delete local temp files,")
+    if(lang=="bash") {
+      delCall.frontend = paste0("rm -rf ",Tempdir.frontend)
+      print(delCall.frontend)
+      system(delCall.frontend)
+    } else {
+      delCall.frontend = unlink(Tempdir.frontend,recursive = TRUE)
     }
 
   cat(" Finito...\n")
@@ -243,16 +275,32 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
 #' @export
 #'
 getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
+  lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
+
   if(class(ticket)=="ticket") {
-    Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
+    #temp directory on local machin
+    if(lang=="BATCH") {
+      Tempdir.frontend = tempdir()
+      tempFolder = shell("echo %TEMP%",intern=TRUE)
+      Tempdir.frontend = paste0(tempFolder,"\\",
+                                paste(sample(c(letters,LETTERS),12),collapse=""))
+      shell(paste("mkdir",Tempdir.frontend))
+    } else {
+      Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
+    }
     Tempdir.backend = ticket[[1]] #ticket$backend.tmp
     hostString = paste(user,host,sep="@")
     cat("contact server...")
     outFile = "Tempout.rda"
-    retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
+    if(lang=="BATCH") {
+      retrieveCall = paste0("PSCP ", hostString,":",Tempdir.backend ,"/",outFile,
+                            "  ",Tempdir.frontend,"/",outFile)
+      status = shell(retrieveCall,intern=T)
+    } else {
+      retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
                           "  ",Tempdir.frontend,"/",outFile)
-    status = system(retrieveCall,intern=T)
-
+      status = system(retrieveCall,intern=T)
+    }
     #check if ticket or a result are found, stop if scp return non-zero status
     if(!is.null(attr(status,"status")) && attr(status,"status")!=0) {
       system(paste0("rm -rf ",Tempdir.frontend))
@@ -262,20 +310,38 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
     cat("  read results,")
     out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
 
-    if(verbose && class(out)!="ticket") {
-      print("print out file from backend master")
-      system(paste0(
-        "ssh ",hostString," less ",
-        Tempdir.backend,
-        "/fastRditijuu_qsub_async.sh.o",
-        substr(ticket[[2]],1,7)
-      ))
+    if(verbose) {
+      if(lang=="bash") {
+        print("print out file from backend master")
+        system(paste0(
+          "ssh ",hostString," less ",
+          Tempdir.backend,
+          "/fastRditijuu_qsub_async.sh.o",
+          substr(ticket[[2]],1,7)
+        ))
+      } else {
+        getPrint_path = paste0(Tempdir.frontend,"/","putty_getPrint.txt")
+        writeLines(paste0(
+          "less ",
+          Tempdir.backend,
+          "/fastRditijuu_qsub_async.sh.o",
+          substr(ticket[[2]],1,7)),con=getPrint_path)
+        shell(paste("Plink -ssh",hostString,"-m", getPrint_path))
+      }
+    }
+
+    #delete frontend
+    if(lang=="bash") {
+      delCall.frontend = paste0("rm -rf ",Tempdir.frontend)
+      print(delCall.frontend)
+      system(delCall.frontend)
+    } else {
+      delCall.frontend = unlink(Tempdir.frontend,recursive = TRUE)
     }
 
     if(class(out)=="ticket") {
       #out is a ticket, backend master has only saved a ticket file so far
       cat(" job has not finshed yet, ask again later")
-      system(paste0("rm -rf ",Tempdir.frontend))
       names(out) = ticket$names
       return(NULL)
     } else {
