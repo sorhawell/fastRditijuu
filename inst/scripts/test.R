@@ -7,7 +7,7 @@ do.call(mean,list(1:7))     #local
 out = system("timeout 5 ssh sowe@login.gbar.dtu.dk ls",intern=T)
 a=2
 out = doClust(function(x) x+a ,1:8, globalVar = list(a=a),user="sowe",async = T,qsub.walltime="00:10:00")
-result = getResult(out,user="sowe",verbose = T)
+result = getResult(out,user="sowe",verbose = F)
 cleanUp(user="sowe")
 
 ticket = doClust(function(x) {Sys.sleep(120);'blop'} ,1:8,
@@ -64,7 +64,7 @@ out = lply(X=1:250,FUN=function(x) x+1,max.nodes=12,user="sowe")
 
 a=1
 out = lply(X=1:250,FUN=function(x) x+a,max.nodes=2,globalVar = list(a=a),user="sowe",async=T)
-result = getResult(out,user="sowe",verbose = T)
+result = getResult(out,user="sowe",verbose = F)
 
 a=1
 out = lply(X=list(a=2,b=3,c=5),FUN=function(x) x+a,max.nodes=2,globalVar = list(a=a),user="sowe",async=T)
