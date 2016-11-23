@@ -49,13 +49,16 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
     tempDirCall = paste0(
       "Plink -ssh ",hostString," -l ",user,keyPath," -m ",path_maketemp
     )
-    shell(tempDirCall)
-    return("success")
   }
 
   #make server call#1 one protected by time out and tryCatch
   tryCatch({
-    Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
+    if(lang=="bash") {
+      Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
+    }else {
+      Tempdir.backend = shell(tempDirCall)
+      return("success")
+    }
   },
   #if failing, make complete stop
   error=function(e) stop("connection to host failed, check user name and rsa keys for ssh"))
