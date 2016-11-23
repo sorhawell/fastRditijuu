@@ -40,9 +40,9 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
       "timeout 15 ssh",hostString,keyPath, #ssh the server with 10 sec time out
       "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
   } else {
-    path_maketemp = paste0(Tempdir.frontend,"\\putty_maketemp.txt")
+    path_maketemp = paste0(Tempdir.frontend,"/putty_maketemp.txt")
     writeLines(
-      "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'", #source profile and create temp dir
+      "source /etc/profile \n mkdir -p ~/tmp \n mktemp -d ~/tmp/XXXXXXXXXXXX", #source profile and create temp dir
       con=path_maketemp)
     hostString  = "login.gbar.dtu.dk"
     user = "sowe"
