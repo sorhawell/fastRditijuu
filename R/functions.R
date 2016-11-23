@@ -240,33 +240,48 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
     Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
     Tempdir.backend = ticket[[1]] #ticket$backend.tmp
     hostString = paste(user,host,sep="@")
-    cat("returning from server...")
+    cat("contact server...")
     outFile = "Tempout.rda"
     retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
                           "  ",Tempdir.frontend,"/",outFile)
     status = system(retrieveCall,intern=T)
+
+    #check if ticket or a result are found, stop if scp return non-zero status
     if(!is.null(attr(status,"status")) && attr(status,"status")!=0) {
       system(paste0("rm -rf ",Tempdir.frontend))
-      stop("failed to locate result")
+      stop("fastRditijuu: 'Failed to locate job. Maybe this job has been deleted, with cleanUp()?'")
     }
+
     cat("  read results,")
-
-
-    if(verbose) system(paste0(
-      "ssh ",hostString," less ",
-      Tempdir.backend,
-      "/fastRditijuu_qsub_async.sh.o",
-       substr(ticket[[2]],1,7)
-    ))
-
     out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
-    if(class(out)=="ticket") cat(" job has not finshed yet, ask again later") else cat(" job's done!")
-    system(paste0("rm -rf ",Tempdir.frontend))
-    names(out) = ticket$names
-    return(out)
+
+    if(verbose && class(out)!="ticket") {
+      print("print out file from backend master")
+      system(paste0(
+        "ssh ",hostString," less ",
+        Tempdir.backend,
+        "/fastRditijuu_qsub_async.sh.o",
+        substr(ticket[[2]],1,7)
+      ))
+    }
+
+    if(class(out)=="ticket") {
+      #out is a ticket, backend master has only saved a ticket file so far
+      cat(" job has not finshed yet, ask again later")
+      system(paste0("rm -rf ",Tempdir.frontend))
+      names(out) = ticket$names
+      return(NULL)
+    } else {
+      #since out is not a ticket, the beckend master must have overwritten
+      # the ticket file with a result file, return out to user
+      cat(" job's done!")
+      return(out)
+    }
+
+  #ticket is not of class ticket
   } else {
     print("this seems not to be a valid ticket")
-    return(ticket)
+    return(NULL)
   }
 }
 
@@ -297,14 +312,16 @@ readPrint = function(hostString="sowe@login.gbar.dtu.dk",
 #' @return TRUE/1 if found and deleted
 #' @export
 #'
-cleanUp = function(user,host='login.gbar.dtu.dk',printCols=3) {
+cleanUp = function(user,host='login.gbar.dtu.dk',print.files=F,printCols=3) {
   hostString = paste0(user,"@",host)
   system(paste0("ssh ",hostString," rm -rf tmp"))
   system(paste0("ssh ",hostString," rm -rf .BatchJobs.R"))
-  print("returning content of user root")
-  do.call(mapply,list(FUN=paste,split( #sort files in columns
+  if(print.files) {
+    print("returning content of user root")
+    do.call(mapply,list(FUN=paste,split( #sort files in columns
     system(paste0("ssh ",hostString," ls -a"),intern=T)
     ,1:printCols)))
+  } else {NULL}
 }
 
 
