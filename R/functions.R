@@ -385,16 +385,21 @@ readPrint = function(hostString="sowe@login.gbar.dtu.dk",
 #' @return TRUE/1 if found and deleted
 #' @export
 #'
-cleanUp = function(user,host='login.gbar.dtu.dk',print.files=F,printCols=3) {
-  hostString = paste0(user,"@",host)
-  system(paste0("ssh ",hostString," rm -rf tmp"))
-  system(paste0("ssh ",hostString," rm -rf .BatchJobs.R"))
-  if(print.files) {
-    print("returning content of user root")
-    do.call(mapply,list(FUN=paste,split( #sort files in columns
-    system(paste0("ssh ",hostString," ls -a"),intern=T)
-    ,1:printCols)))
-  } else {NULL}
+cleanUp = function(user,host='login.gbar.dtu.dk') {
+  lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
+  if(lang=="bash") {
+    hostString = paste0(user,"@",host)
+    system(paste0("ssh ",hostString," rm -rf tmp"))
+    system(paste0("ssh ",hostString," rm -rf .BatchJobs.R"))
+  } else {
+    cleanUp_path = paste0(shell("echo %TEMP%",intern=T),"\\","putty_cleanUp.txt")
+    writeLines("
+rm -rf tmp
+rm -rf .BatchJobs.R
+",con=cleanUp_path)
+    shell(paste("Plink -ssh",hostString,"-m",cleanUp_path))
+
+  }
 }
 
 
