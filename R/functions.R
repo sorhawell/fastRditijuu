@@ -52,6 +52,8 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
   }
 
   #make server call#1 one protected by time out and tryCatch
+  print(tempDirCall)
+  if(readline("stop ? y/n") == "y") return("stopping")
   tryCatch({
     if(lang=="bash") {
       Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
