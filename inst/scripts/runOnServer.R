@@ -1,13 +1,18 @@
-#Soren Welling 2016 123
+#Soren Havelund Welling 2016
 #cluster backend script to execute a do.call-like call
 #Can be used as a seamless cluster backend for local execution
 
-#this script loads an export object (list)
-# first cell a function (or its name)
-# second ćell a char vector of needed packages (can be empty)
-# remaining cells are arguments passed to function by do.call
-# function is executed and return value is saved to .Tempout.rda
+#this script is instructs backend master.
+#the backend master is started through ssh by a remote user somewhere in the world
+#the backend master loads a Rdata file sent by remote user
+#the Rdata file contains a function and function arguments and other run parametes
 
+#This backend will either:
+#a1 - perform the entire jobs itself (async=FALSE) and save the result
+#b1 - submit itself via qsub to torque cluster and return instantly a ticket
+#     , not the result (async=TRUE). Result can be retrieved later with ticket.
+#a2 - split job to several slaves and collect results (see lply(), async=FALSE)
+#b2 = #b1(#a2)  (see lply(), async=TRUE)
 
 #This script has step 1 to 9
 print("Printing from R backend on server...")
@@ -196,10 +201,10 @@ if(!export$async) {
 print("save output")
 saveRDS(out,file="Tempout.rda")
 
-##9 say goodbye
-print("Hello Master, this is HAL 9000. Work completed, returning to local.")
-print(Sys.time())
-
 if(export$async==FALSE)
-writeLines("Hello Master, this is HAL 9000. Work completed, returning to local.",
+  writeLines("Server Master: 'Job's done, returning to local client'",
              con="job_completed.txt")
+
+##9 say goodbye
+print("Server Master: Job's done, returning to local client")
+print(Sys.time())
