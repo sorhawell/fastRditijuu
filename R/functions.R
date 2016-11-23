@@ -57,7 +57,7 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
       Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
     }else {
       Tempdir.backend = shell(tempDirCall)
-      return("success")
+#      return("success")
     }
   },
   #if failing, make complete stop
@@ -107,7 +107,9 @@ server is either ignoring you or maybe host server is wrong or no internet")
     varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
                              Tempdir.backend,"/",varFileName)
   } else {
-    stop("not supported yet")
+    varTransferCall = paste0("PSCP  ",varPath.frontend," ",hostString,":",
+                             Tempdir.backend,"/",varFileName)
+    return("success2")
   }
   cat(" transfer variables,")
   system(varTransferCall)
