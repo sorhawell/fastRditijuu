@@ -204,9 +204,9 @@ print("save output")
 saveRDS(out,file="Tempout.rda")
 
 if(export$async==FALSE)
-  writeLines("Server Master: 'Job's done, returning to local client'",
+  writeLines("Server Master: 'Job's done!'",
              con="job_completed.txt")
 
 ##9 say goodbye
-print("Server Master: Job's done, returning to local client")
+print("Server Master: 'Job's done!'")
 print(Sys.time())
