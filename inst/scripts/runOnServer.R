@@ -124,6 +124,7 @@ if(!export$async) {
       #BatchJobs package only needs to be loaded on master node, not on slaves
 
       #split jobs into one job-list for each node
+      namesX = names(X)
       cluster.nodes = min(length(X),max.nodes) #no more nodes required than jobs
       jobArrays = suppressWarnings(split(X,1:cluster.nodes))
       splitKey  = unlist(suppressWarnings(split(1:length(X),1:cluster.nodes)),use.names = FALSE)
@@ -163,6 +164,7 @@ if(!export$async) {
       print("All jobs has finished")
       out = unlist(loadResults(reg,1:cluster.nodes),recursive = FALSE)
       out = out[invSplitKey] #re-order jobs by inverted splitKey
+      names(out) = namesX
       removeRegistry(reg,ask="no")
       return(out)
     }

@@ -221,11 +221,7 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
     qsub.proc     = qsub.proc,
     qsub.nodes    = qsub.nodes)
   }
-  if(!async) {
-    names(out) = names(X) #restore list naming
-  } else {
-    out$names = names(X)
-  }
+
   return(out)
 }
 
