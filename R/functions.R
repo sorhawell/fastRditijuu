@@ -47,8 +47,8 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
     hostString  = "login.gbar.dtu.dk"
     user = "sowe"
     tempDirCall = paste0(
-      "Plink -ssh ",hostString," -l ",user," -m ",path_maketemp
-    ) #ssh the server with 10 sec time out
+      "Plink -ssh ",hostString," -l ",user,keyPath," -m ",path_maketemp
+    )
     shell(tempDirCall)
     return("success")
   }
