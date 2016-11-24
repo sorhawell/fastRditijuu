@@ -87,11 +87,12 @@ ticket = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)
            globalVar=list(X=X,y=y),  #gotta mention global variables
            packages=c("randomForest"), #mention packages to be installed and/or loaded
            user="sowe",                #mention user name, remember to set up private/public key
-           #host="grid02.compute.dtu.dk",Rscript=F,
-           async = TRUE,
+           host="grid01.compute.dtu.dk",Rscript=F,
+           async = F,
            max.nodes = 78,
            qsub.walltime = "00:15:00",
            qsub.proc = 1)             #optional limit to certain number of nodes
                                        # ... do not set higher than 80.
 result = getResult(ticket,user="sowe",verbose = TRUE)
 plot(rep(1:24,50),unlist(result),col="#23232313",log="x")
+cleanUp("sowe")
