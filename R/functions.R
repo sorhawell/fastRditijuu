@@ -133,6 +133,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
     system(scriptTransferCall)
   } else {
     scriptTransferCall = paste0("PSCP ",keyPath,scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+    cat(scriptTransferCall)
     shell(scriptTransferCall)
   }
 
