@@ -25,9 +25,8 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
   #temp directory on local machin
   if(lang=="BATCH") {
 
-    Tempdir.frontend = tempdir()
     tempFolder = shell("echo %TEMP%",intern=TRUE)
-    Tempdir.frontend = paste0(tempFolder,"\\",
+    Tempdir.frontend = paste0(tempFolder,"\\","fastR",
                       paste(sample(c(letters,LETTERS),12),collapse=""))
     shell(paste("mkdir",Tempdir.frontend))
   } else {
@@ -49,7 +48,7 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
       "source /etc/profile \n mkdir -p ~/tmp \n mktemp -d ~/tmp/XXXXXXXXXXXX", #source profile and create temp dir
       con=path_maketemp)
     tempDirCall = paste0(
-      "Plink -ssh ",hostString," -l ",user,keyPath," -m ",path_maketemp
+      "Plink -ssh ",hostString,keyPath," -m ",path_maketemp
     )
   }
 
