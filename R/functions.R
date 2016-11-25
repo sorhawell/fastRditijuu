@@ -221,7 +221,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
 #' @param FUN mapper function
 #' @param user username for server
 #' @param host server adress (will be combined as user@host)
-#' @param keyPath
+#' @param keyPath path to local ssh key (mainly for windows)
 #' @param Rscript if true verbose, however only supported by gbar, nor compute.cluster
 #' @param packages required packages on server
 #' @param max.nodes maximum nodes reuired, do not set higher than 80 (79 if async=T)
