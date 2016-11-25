@@ -221,6 +221,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
 #' @param FUN mapper function
 #' @param user username for server
 #' @param host server adress (will be combined as user@host)
+#' @param keyPath
 #' @param Rscript if true verbose, however only supported by gbar, nor compute.cluster
 #' @param packages required packages on server
 #' @param max.nodes maximum nodes reuired, do not set higher than 80 (79 if async=T)
@@ -234,7 +235,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
 #'
 #' @return list of results
 #' @export
-lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
+lply = function(X, FUN, user, host="login.gbar.dtu.dk",keyPath=NULL, Rscript=T,
                 packages=c(),max.nodes=24,local=FALSE,globalVar=list(),async=F,
                 qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,...) {
   if(local) {
@@ -257,6 +258,7 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk", Rscript=T,
     globalVar = globalVar,
     user      = user,
     host      = host,
+    keyPath   = keyPath,
     async     = async,
     qsub.walltime = qsub.walltime,
     qsub.proc     = qsub.proc,
