@@ -98,7 +98,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
              qsub.proc     = list(qsub.proc),
              qsub.nodes    = list(qsub.nodes))
   varFileName = "Tempexp.rda"
-  if(lang="bash") {
+  if(lang=="bash") {
     varPath.frontend = paste0(Tempdir.frontend,varFileName)
   } else {
     varPath.frontend = paste0(Tempdir.frontend,"\\",varFileName)
