@@ -356,26 +356,6 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
   }
 }
 
-
-#' Read Rout, useful if Rscript=FALSE to retrieve print
-#'
-#' @param hostString server to read from
-#' @param printFile  print file to read
-#'
-#' @return lines of print
-#' @export
-#'
-readPrint = function(hostString="sowe@login.gbar.dtu.dk",
-                     printFile = 'runOnServer.Rout') {
-  retrieveCall = paste0("scp ", hostString,":",printFile," ",getwd(),"/",'.tempPrint.Rout')
-  system(retrieveCall,wait=F)
-  #system('scp sowe@grid01.compute.dtu.dk:runOnServer.Rout	runOnServer.Rout')
-    Sys.sleep(2)
-    cat(paste(readLines('.tempPrint.Rout'),collapse="\n"))
-    readLines('.tempPrint.Rout')
-}
-
-
 #' Clean up for temp files
 #' @param user server to read from
 #' @param host  print file to read
