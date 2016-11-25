@@ -17,7 +17,7 @@
 #'
 doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,packages=c(),
                    Rscript=TRUE,globalVar=list(),async=FALSE,
-                   qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs) {
+                   qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs=NULL) {
   if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
   keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
   lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
