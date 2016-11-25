@@ -4,7 +4,7 @@
 \alias{cleanUp}
 \title{Clean up for temp files}
 \usage{
-cleanUp(user, host = "login.gbar.dtu.dk", printCols = 3)
+cleanUp(user, host = "login.gbar.dtu.dk")
 }
 \arguments{
 \item{user}{server to read from}
