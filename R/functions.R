@@ -132,7 +132,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
     scriptTransferCall = paste0("scp ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
     system(scriptTransferCall)
   } else {
-    scriptTransferCall = paste0("PSCP ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+    scriptTransferCall = paste0("PSCP ",keyPath,scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
     shell(scriptTransferCall)
   }
 
@@ -173,9 +173,9 @@ server is either ignoring you or maybe host server is wrong or no internet")
                                               "  ",Tempdir.frontend,"/",outFile)
       system(retrieveCall)
     } else {
-      retrieveCall = paste0("PSCP ", hostString,":",Tempdir.backend ,"/",outFile,
+      retrieveCall = paste0("PSCP ",keyPath, hostString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
-      print(retrieveCall)
+      cat(retrieveCall)
       shell(retrieveCall)
     }
 
