@@ -4,12 +4,14 @@
 \alias{cleanUp}
 \title{Clean up for temp files}
 \usage{
-cleanUp(user, host = "login.gbar.dtu.dk")
+cleanUp(user, host = "login.gbar.dtu.dk", keyPath = NULL)
 }
 \arguments{
 \item{user}{server to read from}
 
 \item{host}{print file to read}
+
+\item{keyPath}{}
 }
 \value{
 TRUE/1 if found and deleted

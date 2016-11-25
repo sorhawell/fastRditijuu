@@ -365,11 +365,12 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
 #' Clean up for temp files
 #' @param user server to read from
 #' @param host  print file to read
+#' @param keyPath
 #'
 #' @return TRUE/1 if found and deleted
 #' @export
 #'
-cleanUp = function(user,host='login.gbar.dtu.dk') {
+cleanUp = function(user,host='login.gbar.dtu.dk',keyPath=NULL) {
   lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
   if(lang=="bash") {
     hostString = paste0(user,"@",host)
@@ -381,7 +382,8 @@ cleanUp = function(user,host='login.gbar.dtu.dk') {
 rm -rf tmp
 rm -rf .BatchJobs.R
 ",con=cleanUp_path)
-    shell(paste("Plink -ssh",hostString,"-m",cleanUp_path))
+    if(is.null(keyPath)) stop("keyPath is needed for windows putty")
+    shell(paste("Plink -ssh",keyPath,hostString,"-m",cleanUp_path))
 
   }
 }
