@@ -48,8 +48,6 @@ doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,pa
     writeLines(
       "source /etc/profile \n mkdir -p ~/tmp \n mktemp -d ~/tmp/XXXXXXXXXXXX", #source profile and create temp dir
       con=path_maketemp)
-    hostString  = "login.gbar.dtu.dk"
-    user = "sowe"
     tempDirCall = paste0(
       "Plink -ssh ",hostString," -l ",user,keyPath," -m ",path_maketemp
     )
