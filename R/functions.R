@@ -98,7 +98,11 @@ server is either ignoring you or maybe host server is wrong or no internet")
              qsub.proc     = list(qsub.proc),
              qsub.nodes    = list(qsub.nodes))
   varFileName = "Tempexp.rda"
-  varPath.frontend = paste0(Tempdir.frontend,varFileName)
+  if(lang="bash") {
+    varPath.frontend = paste0(Tempdir.frontend,varFileName)
+  } else {
+    varPath.frontend = paste0(Tempdir.frontend,"\\",varFileName)
+  }
   cat("frontend Tempdir ",Tempdir.frontend,"\n")
   cat("backend  Tempdir ",Tempdir.backend ,"\n")
   cat("save variables,")
@@ -111,9 +115,10 @@ server is either ignoring you or maybe host server is wrong or no internet")
                              Tempdir.backend,"/",varFileName)
     system(varTransferCall)
   } else {
-    varTransferCall = paste0("PSCP  ",varPath.frontend," ",hostString,":",
+    varTransferCall = paste0("PSCP ",keyPath,varPath.frontend," ",hostString,":",
                              Tempdir.backend,"/",varFileName)
-    print(varTransferCall)
+
+    cat(varTransferCall)
     shell(varTransferCall)
   }
 
@@ -148,14 +153,14 @@ server is either ignoring you or maybe host server is wrong or no internet")
     print(executeCall)
     system(executeCall)
   } else {
-    path_runfile = paste0(Tempdir.frontend,"/putty_runFile.txt")
+    path_runfile = paste0(Tempdir.frontend,"\\putty_runFile.txt")
     backend.bashcall = paste0(
       "source /etc/profile", "\n",     #source profile script
       "cd ",Tempdir.backend, "\n",   #change to backend temp dir
       program," ",runFile," ",suffix, "\n")
     writeLines(backend.bashcall,con = path_runfile)
-    executeCall = paste0('Plink -ssh ',host," -l ",user," -m ",path_runfile)
-    print(executeCall)
+    executeCall = paste0('Plink -ssh ',hostString,keyPath," -m ",path_runfile)
+    cat(executeCall)
     shell(executeCall)
   }
 
@@ -187,9 +192,9 @@ server is either ignoring you or maybe host server is wrong or no internet")
           path_delBeckendTemp = paste0(Tempdir.frontend,"/putty_delBackendTemp.txt")
           delCall_string = paste0("rm -rf ",Tempdir.backend)
           writeLines(delCall_string,con=path_delBeckendTemp)
-          delCall.backend = paste0("Plink -ssh ",hostString, " -m ",path_delBeckendTemp)
-          print(delCall.backend)
-          print(delCall_string)
+          delCall.backend = paste0("Plink -ssh ",hostString,keyPath," -m ",path_delBeckendTemp)
+          cat(delCall.backend)
+          cat(delCall_string)
           shell(delCall.backend)
       }
     } else {
