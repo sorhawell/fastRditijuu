@@ -279,9 +279,9 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk",keyPath=NULL, Rscript=T,
 #' @return Either the result of a finished job, or if not complete yet, then a ticket like object
 #' @export
 #'
-getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
+getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F,keyPath=NULL) {
   lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
-
+  keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
   if(class(ticket)=="ticket") {
     #temp directory on local machin
     if(lang=="BATCH") {
@@ -298,7 +298,7 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
     cat("contact server...")
     outFile = "Tempout.rda"
     if(lang=="BATCH") {
-      retrieveCall = paste0("PSCP ", hostString,":",Tempdir.backend ,"/",outFile,
+      retrieveCall = paste0("PSCP ",keyPath, hostString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
       status = shell(retrieveCall,intern=T)
     } else {
@@ -331,7 +331,7 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F) {
           Tempdir.backend,
           "/fastRditijuu_qsub_async.sh.o",
           substr(ticket[[2]],1,7)),con=getPrint_path)
-        shell(paste("Plink -ssh",hostString,"-m", getPrint_path))
+        shell(paste("Plink -ssh",hostString,keyPath,"-m", getPrint_path))
       }
     }
 
