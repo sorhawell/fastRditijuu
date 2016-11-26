@@ -2,8 +2,18 @@ library("fastRditijuu")
 mean(1:7)
 do.call(mean,list(1:7))     #local
 
-doClust(1:10,mean,"sowe")
+doClust(mean,1:10,"sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk")
 
+
+
+X = data.frame(replicate(6,rnorm(1500)))
+y = apply(X,1,sum)
+system.time({
+  out = doClust(function(x) mclapply(x,function(x) tail(randomForest(X,y)$rsq,1),mc.cores=4),
+  1:24,"sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk",packages = c("parallel","randomForest"),
+  globalVar = list(X=X,y=y))
+})
+c
 
 #hello cluster
 out = system("timeout 5 ssh sowe@login.gbar.dtu.dk ls",intern=T)
@@ -82,17 +92,18 @@ X[] = X[1:3]
 X[] = X[] + rnorm(500*24)
 
 #run 1000 times on cluster
-ticket = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
+ticket = lply(X=rep(1:24,2),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
            #that extra stuff you need to mention
            globalVar=list(X=X,y=y),  #gotta mention global variables
            packages=c("randomForest"), #mention packages to be installed and/or loaded
            user="sowe",                #mention user name, remember to set up private/public key
-           host="grid01.compute.dtu.dk",Rscript=F,
-           async = F,
-           max.nodes = 78,
+           #host="grid01.compute.dtu.dk",Rscript=T,
+           keyPath ="c:/Users/sowe/.ssh/fastr2.ppk",
+           async = T,nCores=1,
+           max.nodes = 4,
            qsub.walltime = "00:15:00",
            qsub.proc = 1)             #optional limit to certain number of nodes
                                        # ... do not set higher than 80.
-result = getResult(ticket,user="sowe",verbose = TRUE)
-plot(rep(1:24,50),unlist(result),col="#23232313",log="x")
+result = getResult(ticket,user="sowe",verbose = TRUE, keyPath ="c:/Users/sowe/.ssh/fastr2.ppk")
+plot(rep(1:24,2),unlist(result),col="#23232313",log="x")
 cleanUp("sowe")

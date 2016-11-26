@@ -8,6 +8,7 @@
 #' @param packages char vector of package names (can be empty)
 #' @param Rscript execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)
 #' @param async return after starting job? returned value is ticked to fetch result when job completed
+#' @param nCores number of cores on each node
 #' @param qsub.walltime only relevant for async=T or lply, job time limit on Torque('qsub')-cluster
 #' @param qsub.proc how many processes to ask for per job, 1 unless using doParallel etc.
 #' @param qsub.nodes how many nodes to ask for per job, leave unchanged if in doubt
@@ -16,7 +17,7 @@
 #' @export
 #'
 doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,packages=c(),
-                   Rscript=TRUE,globalVar=list(),async=FALSE,
+                   Rscript=TRUE,globalVar=list(),async=FALSE,nCores =1,
                    qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs=NULL) {
   if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
   keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
@@ -93,7 +94,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
   #save variables to Rdata file in temp directory on local machine
   export = c(what=list(enquote(what)),packages=list(packages),
              arg=list(arg),globalVar=list(globalVar),Tempdir.backend=list(Tempdir.backend),
-             async=list(async),
+             async=list(async),nCores = list(nCores),
              qsub.walltime = list(qsub.walltime),
              qsub.proc     = list(qsub.proc),
              qsub.nodes    = list(qsub.nodes))
@@ -229,6 +230,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
 #' @param local should the lply run on local computer (only for debugging/testing)
 #' @param globalVar list of global variables
 #' @param async true/false, if to run lply loop asynchronously
+#' @param nCores number of cores(>1 will trigger parallel::mclapply)
 #' @param qsub.walltime change wall time qsub, will apply to both master and slaves
 #' @param qsub.proc how many processes to ask for per job, 1 unless using doParallel etc.
 #' @param qsub.nodes how many nodes to ask for per job, leave unchanged if in doubt
@@ -237,7 +239,7 @@ server is either ignoring you or maybe host server is wrong or no internet")
 #' @return list of results
 #' @export
 lply = function(X, FUN, user, host="login.gbar.dtu.dk",keyPath=NULL, Rscript=T,
-                packages=c(),max.nodes=24,local=FALSE,globalVar=list(),async=F,
+                packages=c(),max.nodes=24,local=FALSE,globalVar=list(),async=F,nCores = 1,
                 qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,...) {
   if(local) {
     # require("BatchJobs")
@@ -246,13 +248,14 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk",keyPath=NULL, Rscript=T,
     print("local is not supported anymore")
     return(1)
   } else {
-    packages = unique(c(packages,"BatchJobs")) #include BatchJobs package on server
+    packages = unique(c(packages,"BatchJobs","parallel")) #include BatchJobs package on server
     out = doClust('doBatchJob',
       arg=list(
         X=X,
         FUN=FUN,
         max.nodes=max.nodes,
         packages=packages,
+        nCores = nCores,
         ...),
     packages  = packages,
     Rscript   = Rscript,
@@ -261,6 +264,7 @@ lply = function(X, FUN, user, host="login.gbar.dtu.dk",keyPath=NULL, Rscript=T,
     host      = host,
     keyPath   = keyPath,
     async     = async,
+    nCores    = nCores,
     qsub.walltime = qsub.walltime,
     qsub.proc     = qsub.proc,
     qsub.nodes    = qsub.nodes)
