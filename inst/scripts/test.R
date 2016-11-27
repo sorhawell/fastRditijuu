@@ -104,15 +104,15 @@ X[] = X[1:3]
 X[] = X[] + rnorm(500*24)
 
 #run 1000 times on cluster
-ticket = lply(X=rep(1:24,2),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
+ticket = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
            #that extra stuff you need to mention
            globalVar=list(X=X,y=y),  #gotta mention global variables
            packages=c("randomForest"), #mention packages to be installed and/or loaded
            user="sowe",                #mention user name, remember to set up private/public key
            #host="grid01.compute.dtu.dk",Rscript=T,
            keyPath ="c:/Users/sowe/.ssh/fastr2.ppk",
-           async = T,nCores=1,
-           max.nodes = 4,
+           async = T,nCores=4,
+           max.nodes = 40,
            qsub.walltime = "00:15:00",
            qsub.proc = 1)             #optional limit to certain number of nodes
                                        # ... do not set higher than 80.
