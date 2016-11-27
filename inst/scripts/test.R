@@ -106,4 +106,4 @@ ticket = lply(X=rep(1:24,2),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$
                                        # ... do not set higher than 80.
 result = getResult(ticket,user="sowe",verbose = TRUE, keyPath ="c:/Users/sowe/.ssh/fastr2.ppk")
 plot(rep(1:24,2),unlist(result),col="#23232313",log="x")
-cleanUp("sowe")
+cleanUp("sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk")
