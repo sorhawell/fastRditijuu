@@ -2,7 +2,6 @@
 
 export(cleanUp)
 export(doClust)
-export(exchangeRSAkeys)
 export(getResult)
 export(lply)
 export(makeConfig)
