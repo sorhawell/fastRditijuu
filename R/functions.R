@@ -249,7 +249,7 @@ makeConfig = function() {
   return(out)
 }
 #this assures the input of doClust, except what and arg, are the inputs to this function.
-formals(makeConfig) = formals(doClust)[!names(formals(doClust))%in%c("what","arg","conf")]
+formals(makeConfig) = formals(doClust)[!names(formals(doClust))%in%c("what","arg","conf","globalVar")]
 
 
 #' Powerful lapply function with a qsub(Torque/PBS)-cluster as backend
