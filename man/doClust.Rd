@@ -7,7 +7,7 @@
 doClust(what, arg = list(), user, host = "login.gbar.dtu.dk",
   keyPath = NULL, packages = c(), Rscript = TRUE, globalVar = list(),
   async = FALSE, qsub.walltime = "00:09:00", qsub.proc = 1,
-  qsub.nodes = 1, qsub.moreArgs)
+  qsub.nodes = 1, qsub.moreArgs = NULL)
 }
 \arguments{
 \item{what}{function or name of function to execute}

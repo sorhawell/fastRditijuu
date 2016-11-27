@@ -4,10 +4,10 @@
 \alias{lply}
 \title{Powerful lapply function with a qsub(Torque/PBS)-cluster as backend}
 \usage{
-lply(X, FUN, user, host = "login.gbar.dtu.dk", Rscript = T,
-  packages = c(), max.nodes = 24, local = FALSE, globalVar = list(),
-  async = F, qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1,
-  ...)
+lply(X, FUN, user, host = "login.gbar.dtu.dk", keyPath = NULL,
+  Rscript = T, packages = c(), max.nodes = 24, local = FALSE,
+  globalVar = list(), async = F, qsub.walltime = "00:09:00",
+  qsub.proc = 1, qsub.nodes = 1, ...)
 }
 \arguments{
 \item{X}{object to map}
@@ -17,6 +17,8 @@ lply(X, FUN, user, host = "login.gbar.dtu.dk", Rscript = T,
 \item{user}{username for server}
 
 \item{host}{server adress (will be combined as user@host)}
+
+\item{keyPath}{path to local ssh key (mainly for windows)}
 
 \item{Rscript}{if true verbose, however only supported by gbar, nor compute.cluster}
 

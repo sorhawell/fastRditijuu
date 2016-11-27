@@ -120,7 +120,7 @@ if(!export$async) {
     #this wrapper is handling job-arrays (to split a list of jobs in separate job lists)
     #...and global variables (loads an global variable state)
     #...and combines individual slave node results into list of all results
-    doBatchJob = function(X,FUN,packages=c(),max.nodes=24,globalVar=list(),...) {
+    doBatchJob = function(X,FUN,packages=c(),max.nodes=24,nCores=1,globalVar=list(),...) {
       #BatchJobs package only needs to be loaded on master node, not on slaves
 
       #split jobs into one job-list for each node
@@ -146,7 +146,12 @@ if(!export$async) {
         #run array of jobs on this slave
         print("Master: Mr Meeseeks, please iterate this job-list with lapply")
         print("Mr Meeseeks: 'Sure can do!!'")
-        out = lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
+        if(nCores <= 1) {
+          out =   lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
+        } else {
+          out = mclapply(X,function(X) do.call(eval(FUN),list(X,...)),...,
+                         mc.cores = nCores)
+        }
         print("Mr Meeseeks: Job completed, pooofff!!")
         return(out)
       }
