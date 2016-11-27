@@ -1,3 +1,18 @@
+#' do.call like cluster function, wrapper of do.clust
+#'
+#' @param what function or name of function to execute
+#' @param arg arguments for function
+#' @param conf configuration object made with makeKlods
+#'
+#' @return value return by evaluated function
+#' @export
+#'
+doKlods = function(what,arg,conf) {
+  if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
+  if(!inherits(conf,"fastRconfig")) stop("input conf seems not to be a valid configuration object")
+  do.call(do.clust,arg=c(list(what=what, arg=arg),conf))
+}
+
 #' do.call with cluster as backend via ssh
 #'
 #' @param what function or name of function to execute
@@ -15,171 +30,201 @@
 #' @return value return by evaluated function
 #' @export
 #'
-doClust = function(what,arg=list(),user,host='login.gbar.dtu.dk',keyPath=NULL,packages=c(),
+doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',keyPath=NULL,packages=c(),
                    Rscript=TRUE,globalVar=list(),async=FALSE,
                    qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs) {
-  if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
-  keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
-  if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH" #check OS
 
-  #temp directory on local machin
-  if(lang=="BATCH") {
-    #stop("sorry this package does not support Windows yet")
-    Tempdir.frontend = tempdir()
-  } else {
-    Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
-  }
+  if(is.null(conf)&&is.null(user)) stop("either provide user or conf ('a fastRconfig object')")
 
-  #server call#1 create tempoary directory on backend
-  thisVersion = installed.packages()[installed.packages()[,"Package"]=="fastRditijuu","Version"]
-  cat("this is fastRditijuu version: ", thisVersion , "\n")
-  print("call server... make temp dir,")
-  hostString = paste0(user,"@",host) #make ssh host string
-  if(lang=="bash") {
-    tempDirCall = paste(
-      "timeout 15 ssh",hostString,keyPath, #ssh the server with 10 sec time out
-      "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
-  } else {
-    path_maketemp = paste0(Tempdir.frontend,"/putty_maketemp.txt")
-    writeLines(
-      "source /etc/profile \n mkdir -p ~/tmp \n mktemp -d ~/tmp/XXXXXXXXXXXX", #source profile and create temp dir
-      con=path_maketemp)
-    hostString  = "login.gbar.dtu.dk"
-    user = "sowe"
-    tempDirCall = paste0(
-      "Plink -ssh ",hostString," -l ",user,keyPath," -m ",path_maketemp
-    )
-  }
+  #run inside conf (input parameters will be found first in conf, second input to this function)
+  out = with(envir = if(!is.null(conf)) list() else conf, expr = {
+    if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
+    keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
+    if(!Sys.info()['sysname']=='Windows') lang="bash" else lang="BATCH" #check OS
 
-  #make server call#1 one protected by time out and tryCatch
-  print(tempDirCall)
-  if(readline("stop ? y/n") == "y") return("stopping")
-  tryCatch({
-    if(lang=="bash") {
-      Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
-    }else {
-      Tempdir.backend = shell(tempDirCall)
-#      return("success")
-    }
-  },
-  #if failing, make complete stop
-  error=function(e) stop("connection to host failed, check user name and rsa keys for ssh"))
-  #tryCatch(stop(e), error = function(e) e, finally = print("Hello"))
-
-  #get only last snip of server return
-  cat("message from server:",Tempdir.backend,sep="\n")
-  Tempdir.backend = tail(Tempdir.backend,1)
-  if(is.null(Tempdir.backend)) stop("no server response returned")
-
-  #check if satus was return instead of backend temp dir
-  if(!is.null(attr(Tempdir.backend,"status"))) {
-    status = attr(Tempdir.backend,"status")
-    if(status==124) stop("server didn't answer for 10 seconds, timeout, status 124
-server is either ignoring you or maybe host server is wrong or no internet")
-    if(status==255) stop("seems your login was unauthorized, check ssh keys and username, status 255")
-    stop(paste("unknown return status code:",status))
-  }
-  #silly test to gues if return is a valid path on backend
-  if(!is.character(Tempdir.backend)) {
-    stop(paste("server returns non-char temp path:",Tempdir.backend))
-  } else {
-
-    if(length(Tempdir.backend)==0 ||  #if empty
-    gregexpr(pattern="/",Tempdir.backend[1])[[1]][1]==-1){ #if no slash
-        stop(paste("server returns non-path (has no / in it ??):",Tempdir.backend))
-    }
-  }
-
-  #save variables to Rdata file in temp directory on local machine
-  export = c(what=list(enquote(what)),packages=list(packages),
-             arg=list(arg),globalVar=list(globalVar),Tempdir.backend=list(Tempdir.backend),
-             async=list(async),
-             qsub.walltime = list(qsub.walltime),
-             qsub.proc     = list(qsub.proc),
-             qsub.nodes    = list(qsub.nodes))
-  varFileName = "Tempexp.rda"
-  varPath.frontend = paste0(Tempdir.frontend,varFileName)
-  cat("frontend Tempdir ",Tempdir.frontend,"\n")
-  cat("backend  Tempdir ",Tempdir.backend ,"\n")
-  cat("save variables,")
-  save(export, file=varPath.frontend)
-
-  #server call#2, push variables file to server
-  if(lang=="bash") {
-    varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
-                             Tempdir.backend,"/",varFileName)
-  } else {
-    varTransferCall = paste0("PSCP  ",varPath.frontend," ",hostString,":",
-                             Tempdir.backend,"/",varFileName)
-    return("success2")
-  }
-  cat(" transfer variables,")
-  system(varTransferCall)
-
-  #server call#3, export executable R script
-  runFile = 'runOnServer.R'
-  scriptPath = system.file(paste0("/scripts/",runFile),package="fastRditijuu")
-
-  if(lang=="bash") {
-    scriptTransferCall = paste0("scp ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
-  } else {
-    stop("not supported yet")
-  }
-  cat(" transfer executable,")
-  system(scriptTransferCall)
-
-  #server call#4, execute script
-  program = if(Rscript) "Rscript" else paste0(
-"R CMD BATCH --no-save --no-restore \'--args ",Tempdir.backend,"\'")
-  suffix =  if(Rscript) paste0(" ",Tempdir.backend) else ""
-
-  if(lang=="bash") {
-    executeCall = paste0('ssh ',hostString,
-      " \"",                         #start collection of lines
-      "source /etc/profile ; ",     #source profile script
-      "cd ",Tempdir.backend,"; ",   #change to backend temp dir
-      program," ./",runFile,suffix,        #execute runFile with Tempdir.backend as arg
-      " \"")
-  } else {
-    stop("not supported yet")
-  }
-  cat(" execute! \n")
-  print(executeCall)
-  system(executeCall)
-
-
-  #server call #5, retrieve results
-    cat("returning from server...")
-    outFile = "Tempout.rda"
-    if(lang=="bash") {
-      retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
-                                              "  ",Tempdir.frontend,"/",outFile)
+    #temp directory on local machin
+    if(lang=="BATCH") {
+      #stop("sorry this package does not support Windows yet")
+      Tempdir.frontend = tempdir()
     } else {
-      stop("not supprted yet")
+      Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
     }
 
-    system(retrieveCall)
-    cat("  read results,")
-    out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
-
-    cat(" delete local temp files,")
-    system(if(lang=="bash") {paste0("rm -rf ",Tempdir.frontend)} else {stop("not supported yet")})
-
-    if(!async) {
-      cat(" delete backend temp files,")
-      system(if(lang=="bash") {
-          paste0("ssh ",hostString," rm -rf ",Tempdir.backend)
-        } else {
-          stop("not supported yet")
-      })
+    #server call#1 create tempoary directory on backend
+    thisVersion = installed.packages()[installed.packages()[,"Package"]=="fastRditijuu","Version"]
+    cat("this is fastRditijuu version: ", thisVersion , "\n")
+    print("call server... make temp dir,")
+    hostString = paste0(user,"@",host) #make ssh host string
+    if(lang=="bash") {
+      tempDirCall = paste(
+        "timeout 15 ssh",hostString,keyPath, #ssh the server with 10 sec time out
+        "'source /etc/profile; mkdir -p ~/tmp; mktemp -d ~/tmp/XXXXXXXXXXXX'") #source profile and create temp dir
     } else {
-      cat("keep backend temp... return job ticket,")
+      path_maketemp = paste0(Tempdir.frontend,"/putty_maketemp.txt")
+      writeLines(
+        "source /etc/profile \n mkdir -p ~/tmp \n mktemp -d ~/tmp/XXXXXXXXXXXX", #source profile and create temp dir
+        con=path_maketemp)
+      hostString  = "login.gbar.dtu.dk"
+      user = "sowe"
+      tempDirCall = paste0(
+        "Plink -ssh ",hostString," -l ",user,keyPath," -m ",path_maketemp
+      )
     }
 
-  cat(" Finito...\n")
-  if(async) class(out) = "ticket"
+    #make server call#1 one protected by time out and tryCatch
+    print(tempDirCall)
+    if(readline("stop ? y/n") == "y") return("stopping")
+    tryCatch({
+      if(lang=="bash") {
+        Tempdir.backend = system(tempDirCall,intern = TRUE) #execute, intern=return output
+      }else {
+        Tempdir.backend = shell(tempDirCall)
+  #      return("success")
+      }
+    },
+    #if failing, make complete stop
+    error=function(e) stop("connection to host failed, check user name and rsa keys for ssh"))
+    #tryCatch(stop(e), error = function(e) e, finally = print("Hello"))
+
+    #get only last snip of server return
+    cat("message from server:",Tempdir.backend,sep="\n")
+    Tempdir.backend = tail(Tempdir.backend,1)
+    if(is.null(Tempdir.backend)) stop("no server response returned")
+
+    #check if satus was return instead of backend temp dir
+    if(!is.null(attr(Tempdir.backend,"status"))) {
+      status = attr(Tempdir.backend,"status")
+      if(status==124) stop("server didn't answer for 10 seconds, timeout, status 124
+  server is either ignoring you or maybe host server is wrong or no internet")
+      if(status==255) stop("seems your login was unauthorized, check ssh keys and username, status 255")
+      stop(paste("unknown return status code:",status))
+    }
+    #silly test to gues if return is a valid path on backend
+    if(!is.character(Tempdir.backend)) {
+      stop(paste("server returns non-char temp path:",Tempdir.backend))
+    } else {
+
+      if(length(Tempdir.backend)==0 ||  #if empty
+      gregexpr(pattern="/",Tempdir.backend[1])[[1]][1]==-1){ #if no slash
+          stop(paste("server returns non-path (has no / in it ??):",Tempdir.backend))
+      }
+    }
+
+    #save variables to Rdata file in temp directory on local machine
+    export = c(what=list(enquote(what)),packages=list(packages),
+               arg=list(arg),globalVar=list(globalVar),Tempdir.backend=list(Tempdir.backend),
+               async=list(async),
+               qsub.walltime = list(qsub.walltime),
+               qsub.proc     = list(qsub.proc),
+               qsub.nodes    = list(qsub.nodes))
+    varFileName = "Tempexp.rda"
+    varPath.frontend = paste0(Tempdir.frontend,varFileName)
+    cat("frontend Tempdir ",Tempdir.frontend,"\n")
+    cat("backend  Tempdir ",Tempdir.backend ,"\n")
+    cat("save variables,")
+    save(export, file=varPath.frontend)
+
+    #server call#2, push variables file to server
+    if(lang=="bash") {
+      varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
+                               Tempdir.backend,"/",varFileName)
+    } else {
+      varTransferCall = paste0("PSCP  ",varPath.frontend," ",hostString,":",
+                               Tempdir.backend,"/",varFileName)
+      return("success2")
+    }
+    cat(" transfer variables,")
+    system(varTransferCall)
+
+    #server call#3, export executable R script
+    runFile = 'runOnServer.R'
+    scriptPath = system.file(paste0("/scripts/",runFile),package="fastRditijuu")
+
+    if(lang=="bash") {
+      scriptTransferCall = paste0("scp ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+    } else {
+      stop("not supported yet")
+    }
+    cat(" transfer executable,")
+    system(scriptTransferCall)
+
+    #server call#4, execute script
+    program = if(Rscript) "Rscript" else paste0(
+  "R CMD BATCH --no-save --no-restore \'--args ",Tempdir.backend,"\'")
+    suffix =  if(Rscript) paste0(" ",Tempdir.backend) else ""
+
+    if(lang=="bash") {
+      executeCall = paste0('ssh ',hostString,
+        " \"",                         #start collection of lines
+        "source /etc/profile ; ",     #source profile script
+        "cd ",Tempdir.backend,"; ",   #change to backend temp dir
+        program," ./",runFile,suffix,        #execute runFile with Tempdir.backend as arg
+        " \"")
+    } else {
+      stop("not supported yet")
+    }
+    cat(" execute! \n")
+    print(executeCall)
+    system(executeCall)
+
+
+    #server call #5, retrieve results
+      cat("returning from server...")
+      outFile = "Tempout.rda"
+      if(lang=="bash") {
+        retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
+                                                "  ",Tempdir.frontend,"/",outFile)
+      } else {
+        stop("not supprted yet")
+      }
+
+      system(retrieveCall)
+      cat("  read results,")
+      out = readRDS(file=paste0(Tempdir.frontend,"/",outFile))
+
+      cat(" delete local temp files,")
+      system(if(lang=="bash") {paste0("rm -rf ",Tempdir.frontend)} else {stop("not supported yet")})
+
+      if(!async) {
+        cat(" delete backend temp files,")
+        system(if(lang=="bash") {
+            paste0("ssh ",hostString," rm -rf ",Tempdir.backend)
+          } else {
+            stop("not supported yet")
+        })
+      } else {
+        cat("keep backend temp... return job ticket,")
+      }
+
+    cat(" Finito...\n")
+    if(async) class(out) = "ticket"
+    return(out)
+  })
+}
+
+
+#' wrapepr function bundle all server settings in one object
+#'
+#' @param user username
+#' @param host server (will connect to user@server)
+#' @param keyPath specifiy file and path for private key, if NULL non or system default.
+#' @param packages char vector of package names (can be empty)
+#' @param Rscript execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)
+#' @param async return after starting job? returned value is ticked to fetch result when job completed
+#' @param qsub.walltime only relevant for async=T or lply, job time limit on Torque('qsub')-cluster
+#' @param qsub.proc how many processes to ask for per job, 1 unless using doParallel etc.
+#' @param qsub.nodes how many nodes to ask for per job, leave unchanged if in doubt
+#'
+#' @return value return by evaluated function
+#' @export
+#'
+makeConfig = function() {
+  out = mget(ls())
+  class(out) = "fastRconfig"
   return(out)
 }
+formals(makeConfig) = formals(doClust)[!names(formals(doClust))%in%c("what","arg")]
+
 
 #' Powerful lapply function with a qsub(Torque/PBS)-cluster as backend
 #'
