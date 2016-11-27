@@ -2,7 +2,16 @@ library("fastRditijuu")
 mean(1:7)
 do.call(mean,list(1:7))     #local
 
-doClust(mean,1:10,"sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk")
+#windows
+doClust(mean,1:10,user = "sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk")
+
+#ubuntu
+doClust(mean,1:10,user = "sowe")
+
+#confi
+conf = makeConfig(user = "sowe",package="randomForest")
+doClust(mean,1:10,conf)
+lply(1:10,function(x) x+1,user="sowe")
 
 
 
@@ -86,6 +95,9 @@ result = getResult(out,user="sowe",verbose = T)
 
 #try run iterate 1200 RF models asynchonously with lply
 library("fastRditijuu")
+conf = makeConfig()
+
+
 X = data.frame(replicate(24,rnorm(2500)))
 y = apply(X[,1:3],1,sum)
 X[] = X[1:3]

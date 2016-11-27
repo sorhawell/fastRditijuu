@@ -4,10 +4,10 @@
 \alias{lply}
 \title{Powerful lapply function with a qsub(Torque/PBS)-cluster as backend}
 \usage{
-lply(X, FUN, user, host = "login.gbar.dtu.dk", keyPath = NULL,
-  Rscript = T, packages = c(), max.nodes = 24, local = FALSE,
-  globalVar = list(), async = F, qsub.walltime = "00:09:00",
-  qsub.proc = 1, qsub.nodes = 1, ...)
+lply(X, FUN, conf = NULL, user = NULL, host = "login.gbar.dtu.dk",
+  keyPath = NULL, Rscript = T, packages = c(), max.nodes = 24,
+  local = FALSE, globalVar = list(), async = F, nCores = 1,
+  qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1, ...)
 }
 \arguments{
 \item{X}{object to map}
@@ -31,6 +31,8 @@ lply(X, FUN, user, host = "login.gbar.dtu.dk", keyPath = NULL,
 \item{globalVar}{list of global variables}
 
 \item{async}{true/false, if to run lply loop asynchronously}
+
+\item{nCores}{number of cores(>1 will trigger parallel::mclapply)}
 
 \item{qsub.walltime}{change wall time qsub, will apply to both master and slaves}
 

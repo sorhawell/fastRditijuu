@@ -4,7 +4,8 @@
 \alias{getResult}
 \title{Read Rout, useful if Rscript=FALSE to retrieve print}
 \usage{
-getResult(ticket, user, host = "login.gbar.dtu.dk", verbose = F)
+getResult(ticket, user, host = "login.gbar.dtu.dk", verbose = F,
+  keyPath = NULL)
 }
 \arguments{
 \item{ticket}{the out object from lply or doClust when call with async=TRUE}
