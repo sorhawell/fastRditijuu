@@ -2,7 +2,7 @@
 % Please edit documentation in R/functions.R
 \name{makeConfig}
 \alias{makeConfig}
-\title{wrapepr function bundle all server settings in one object}
+\title{Specify all settings and save to config object}
 \usage{
 makeConfig(user = NULL, host = "login.gbar.dtu.dk", keyPath = NULL,
   packages = c(), Rscript = TRUE, globalVar = list(), async = FALSE,
@@ -32,6 +32,6 @@ makeConfig(user = NULL, host = "login.gbar.dtu.dk", keyPath = NULL,
 value return by evaluated function
 }
 \description{
-wrapepr function bundle all server settings in one object
+Specify all settings and save to config object
 }
 

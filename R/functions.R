@@ -228,7 +228,7 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
   }) #end of with function, do not write code below here
 }
 
-#' wrapepr function bundle all server settings in one object
+#' Specify all settings and save to config object
 #'
 #' @param user username
 #' @param host server (will connect to user@server)
