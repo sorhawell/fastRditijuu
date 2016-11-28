@@ -228,29 +228,6 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
   }) #end of with function, do not write code below here
 }
 
-#' Specify all settings and save to config object
-#'
-#' @param user username
-#' @param host server (will connect to user@server)
-#' @param keyPath specifiy file and path for private key, if NULL non or system default.
-#' @param packages char vector of package names (can be empty)
-#' @param Rscript execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)
-#' @param async return after starting job? returned value is ticked to fetch result when job completed
-#' @param qsub.walltime only relevant for async=T or lply, job time limit on Torque('qsub')-cluster
-#' @param qsub.proc how many processes to ask for per job, 1 unless using doParallel etc.
-#' @param qsub.nodes how many nodes to ask for per job, leave unchanged if in doubt
-#'
-#' @return value return by evaluated function
-#' @export
-#'
-makeConfig = function() {
-  out = mget(ls())
-  class(out) = "fastRconfig"
-  return(out)
-}
-#this assures the input of doClust, except what and arg, are the inputs to this function.
-formals(makeConfig) = formals(doClust)[!names(formals(doClust))%in%c("what","arg","conf","globalVar")]
-
 
 #' Powerful lapply function with a qsub(Torque/PBS)-cluster as backend
 #'
@@ -274,8 +251,8 @@ formals(makeConfig) = formals(doClust)[!names(formals(doClust))%in%c("what","arg
 #' @return list of results
 #' @export
 lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk",keyPath=NULL, Rscript=T,
-                packages=c(),max.nodes=24,local=FALSE,globalVar=list(),async=F,nCores = 1,
-                qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,...) {
+                packages=c(),max.nodes=8,local=FALSE,globalVar=list(),async=T,nCores = 4,
+                qsub.walltime="00:09:59",qsub.proc=4,qsub.nodes=1,...) {
   if(local) {
     # require("BatchJobs")
     # out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,
@@ -284,7 +261,12 @@ lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk",keyPath=N
     return(1)
   } else {
     #include BatchJobs package on server
-    if(!is.null(conf)) conf$packages = unique(c(conf$packages,"BatchJobs","parallel"))
+    if(!is.null(conf)) {
+      conf$packages = unique(c(conf$packages,"BatchJobs","parallel",packages))
+      if(!is.null(conf$max.nodes)) max.nodes = conf$max.nodes
+    }
+    packages      = unique(c(conf$packages,"BatchJobs","parallel",packages))
+
       out = doClust('doBatchJob',
                     arg=list(
                       X=X,
@@ -320,7 +302,12 @@ lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk",keyPath=N
 #' @return Either the result of a finished job, or if not complete yet, then a ticket like object
 #' @export
 #'
-getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F,keyPath=NULL) {
+getResult = function(ticket, conf=NULL, user=NULL, host="login.gbar.dtu.dk",verbose=F,keyPath=NULL) {
+
+  if(is.null(conf)&&is.null(user)) stop("either provide user or conf ('a fastRconfig object')")
+  if(!is.null(conf) && !inherits(conf,'fastRconfig')) stop("conf is not of fastRconfig class, use makeConfig()")
+  if(is.null(conf)) conf=list()
+  out = with(data=conf,{
   lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
   keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
   if(class(ticket)=="ticket") {
@@ -402,6 +389,8 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F,keyPath=NU
     print("this seems not to be a valid ticket")
     return(NULL)
   }
+  })
+return(out)
 }
 
 #' Clean up for temp files
@@ -409,23 +398,64 @@ getResult = function(ticket, user, host="login.gbar.dtu.dk",verbose=F,keyPath=NU
 #' @param host  print file to read
 #' @param keyPath
 #'
+#' @aliases doClust lply getResult
 #' @return TRUE/1 if found and deleted
 #' @export
 #'
-cleanUp = function(user,host='login.gbar.dtu.dk',keyPath=NULL) {
+cleanUp = function(user=NULL,conf=NULL,host='login.gbar.dtu.dk',keyPath=NULL) {
+  # #check if either user or conf is provided
+  if(is.null(conf)&&is.null(user)) stop("either provide user or conf ('a fastRconfig object')")
+  if(!is.null(conf) && !inherits(conf,'fastRconfig')) stop("conf is not of fastRconfig class, use makeConfig()")
+  if(is.null(conf)) conf=list()
   lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
-  if(lang=="bash") {
-    hostString = paste0(user,"@",host)
-    system(paste0("ssh ",hostString," rm -rf tmp"))
-    system(paste0("ssh ",hostString," rm -rf .BatchJobs.R"))
-  } else {
-    cleanUp_path = paste0(shell("echo %TEMP%",intern=T),"\\","putty_cleanUp.txt")
-    writeLines("
-               rm -rf tmp
-               rm -rf .BatchJobs.R
-               ",con=cleanUp_path)
-    if(is.null(keyPath)) stop("keyPath is needed for windows putty")
-    shell(paste("Plink -ssh",keyPath,hostString,"-m",cleanUp_path))
+  hostString = paste0(user,"@",host)
+  keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
+  with(data=conf,{
+    if(lang=="bash") {
 
-  }
+      system(paste0("ssh ",hostString," rm -rf tmp"))
+      system(paste0("ssh ",hostString," rm -rf .BatchJobs.R"))
+    } else {
+      cleanUp_path = paste0(shell("echo %TEMP%",intern=T),"\\","putty_cleanUp.txt")
+      writeLines("
+                 rm -rf tmp
+                 rm -rf .BatchJobs.R
+                 ",con=cleanUp_path)
+      if(is.null(keyPath)) stop("keyPath is needed for windows putty")
+      shell(paste("Plink -ssh",keyPath,hostString,"-m",cleanUp_path))
+
+    }
+  })
 }
+
+#' Specify all settings and save to config object
+#'
+#' @param user username
+#' @param host server (will connect to user@server)
+#' @param keyPath specifiy file and path for private key, if NULL non or system default.
+#' @param packages char vector of package names (can be empty)
+#' @param Rscript execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)
+#' @param async return after starting job? returned value is ticked to fetch result when job completed
+#' @param qsub.walltime only relevant for async=T or lply, job time limit on Torque('qsub')-cluster
+#' @param qsub.proc how many processes to ask for per job, 1 unless using doParallel etc.
+#' @param qsub.nodes how many nodes to ask for per job, leave unchanged if in doubt
+#'
+#' @return value return by evaluated function
+#' @export
+#'
+makeConfig = function(...) {
+  out = list(...)
+  class(out) = "fastRconfig"
+  return(out)
+}
+# #this assures the input of doClust and lpy, except what and arg, are the inputs to this function.
+# fs.doClust = formals(doClust)
+# fs.lply    = formals(lply)
+# fs.makeConfig = c(fs.doClust,fs.lply) #join inputs
+# #remove doublets
+# fs.makeConfig = fs.makeConfig[match(unique(names(fs.makeConfig)),names(fs.makeConfig))]
+# #remove
+# fs.makeConfig = fs.makeConfig[!names(fs.makeConfig)%in%c("what","arg","conf","globalVar")]#remove
+# fs.makeConfig$nCores = 4
+# fs.makeConfig$qsub.proc = 4
+# formals(makeConfig) = fs.makeConfig
