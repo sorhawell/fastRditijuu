@@ -125,7 +125,7 @@ if(!export$async) {
 
       #split jobs into one job-list for each node
       namesX = names(X)
-      cluster.nodes = min(length(X),max.nodes) #no more nodes required than jobs
+      cluster.nodes = max(min(ceiling(length(X)/nCores),max.nodes),1) #no more nodes required than jobs
       jobArrays = suppressWarnings(split(X,1:cluster.nodes))
       splitKey  = unlist(suppressWarnings(split(1:length(X),1:cluster.nodes)),use.names = FALSE)
       invSplitKey = match(1:length(X),splitKey)
@@ -149,7 +149,7 @@ if(!export$async) {
         if(nCores <= 1) {
           out =   lapply(X,function(X) do.call(eval(FUN),list(X,...)),...)
         } else {
-          out = mclapply(X,function(X) do.call(eval(FUN),list(X,...)),...,
+          out = parallel::mclapply(X,function(X) do.call(eval(FUN),list(X,...)),...,
                          mc.cores = nCores)
         }
         print("Mr Meeseeks: Job completed, pooofff!!")
