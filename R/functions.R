@@ -268,45 +268,51 @@ lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk", transfer
                 keyPath=NULL, Rscript=T, packages=c(),max.nodes=8,local=FALSE,
                 globalVar=list(),async=T,nCores = 4,qsub.walltime="00:09:59",qsub.proc=4,
                 qsub.nodes=1,...) {
-  if(local) {
-    # require("BatchJobs")
-    # out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,
-    #                                         globalVar=globalVar,...))
-    print("local is not supported anymore")
-    return(1)
-  } else {
-    #include BatchJobs package on server
-    if(!is.null(conf)) {
-      conf$packages = unique(c(conf$packages,"BatchJobs","parallel",packages))
-      if(!is.null(conf$max.nodes)) max.nodes = conf$max.nodes
+  if(is.null(conf)&&is.null(user)) stop("either provide user or conf ('a fastRconfig object')")
+  if(!is.null(conf) && !inherits(conf,'fastRconfig')) stop("conf is not of fastRconfig class, use makeConfig()")
+  if(is.null(conf)) conf=list()
+  out2 = with(data=conf,{
+    if(local) {
+      # require("BatchJobs")
+      # out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,
+      #                                         globalVar=globalVar,...))
+      print("local is not supported anymore")
+      return(1)
+    } else {
+      #include BatchJobs package on server
+      if(!is.null(conf)) {
+        conf$packages = unique(c(conf$packages,"BatchJobs","parallel",packages))
+        if(!is.null(conf$max.nodes)) max.nodes = conf$max.nodes
+      }
+      packages      = unique(c(conf$packages,"BatchJobs","parallel",packages))
+
+        out = doClust('doBatchJob',
+                      arg=list(
+                        X        = X,
+                        FUN      = FUN,
+                        max.nodes= max.nodes,
+                        packages = packages,
+                        nCores   = nCores,
+                        ...),
+
+                      packages      = packages,
+                      Rscript       = Rscript,
+                      globalVar     = globalVar,
+                      user          = user,
+                      transferHost  = transferHost,
+                      host          = host,
+                      keyPath       = keyPath,
+                      async         = async,
+                      conf          = conf,
+                      nCores        = nCores,
+                      qsub.walltime = qsub.walltime,
+                      qsub.proc     = qsub.proc,
+                      qsub.nodes    = qsub.nodes)
     }
-    packages      = unique(c(conf$packages,"BatchJobs","parallel",packages))
 
-      out = doClust('doBatchJob',
-                    arg=list(
-                      X        = X,
-                      FUN      = FUN,
-                      max.nodes= max.nodes,
-                      packages = packages,
-                      nCores   = nCores,
-                      ...),
-
-                    packages      = packages,
-                    Rscript       = Rscript,
-                    globalVar     = globalVar,
-                    user          = user,
-                    transferHost  = transferHost,
-                    host          = host,
-                    keyPath       = keyPath,
-                    async         = async,
-                    conf          = conf,
-                    nCores        = nCores,
-                    qsub.walltime = qsub.walltime,
-                    qsub.proc     = qsub.proc,
-                    qsub.nodes    = qsub.nodes)
-  }
-
-  return(out)
+    return(out)
+  })
+  return(out2)
 }
 
 #' Read Rout, useful if Rscript=FALSE to retrieve print
