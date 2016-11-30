@@ -126,6 +126,7 @@ if(!export$async) {
       #split jobs into one job-list for each node
       namesX = names(X)
       cluster.nodes = max(min(ceiling(length(X)/nCores),max.nodes),1) #no more nodes required than jobs
+      cat("number of cluster nodes is:",cluster.nodes, "\n")
       jobArrays = suppressWarnings(split(X,1:cluster.nodes))
       splitKey  = unlist(suppressWarnings(split(1:length(X),1:cluster.nodes)),use.names = FALSE)
       invSplitKey = match(1:length(X),splitKey)
@@ -163,7 +164,8 @@ if(!export$async) {
       reg <- makeRegistry(id="testBatchJobs",packages=if(length(packages)) packages else character(0L))
       save(reg,file="testBatchJobs-files/reg.rda")
       batchMap(reg,fun=wrapMeeseeks,X=jobArrays,use.names=T,more.args = c(list(FUN=FUN,...)))
-      submitJobs(reg)
+      #job writer delay, if less than 8 jobs 2 sec per submit, hereafter 5 second per submit
+      submitJobs(reg=reg,ids=1:length(jobArrays),job.delay = function(n,i) i*2,progressbar = FALSE)
       print("jobs have been submitted")
       waitForJobs(reg)
       print("All jobs has finished")
