@@ -45,9 +45,13 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
       tempFolder = shell("echo %TEMP%",intern=TRUE)
       Tempdir.frontend = paste0(tempFolder,"\\","fastR",
                                 paste(sample(c(letters,LETTERS),12),collapse=""))
-      shell(paste("mkdir",Tempdir.frontend))
+      tempFrontCall = paste("mkdir",Tempdir.frontend)
+      cat(tempFrontCall,"\n")
+      shell(tempFrontCall)
     } else {
-      Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
+      tempFrontCall = paste("mkdir",Tempdir.frontend)
+      cat(tempFrontCall,"\n")
+      Tempdir.frontend = system(,intern = TRUE)
     }
 
     #server call#1 create tempoary directory on backend
@@ -131,12 +135,13 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
     if(lang=="bash") {
       varTransferCall = paste0("scp ",varPath.frontend," ",transferString,":",
                                Tempdir.backend,"/",varFileName)
+      cat(varTransferCall,"\n")
       system(varTransferCall)
     } else {
       varTransferCall = paste0("PSCP ",keyPath,varPath.frontend," ",transferString,":",
                                Tempdir.backend,"/",varFileName)
 
-      cat(varTransferCall)
+      cat(varTransferCall,"\n")
       shell(varTransferCall)
     }
 
@@ -148,10 +153,11 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
     cat(" transfer executable,")
     if(lang=="bash") {
       scriptTransferCall = paste0("scp ",scriptPath," ",transferString,":",Tempdir.backend,"/",runFile)
+      cat(scriptTransferCall,"\n")
       system(scriptTransferCall)
     } else {
       scriptTransferCall = paste0("PSCP ",keyPath,scriptPath," ",transferString,":",Tempdir.backend,"/",runFile)
-      cat(scriptTransferCall)
+      cat(scriptTransferCall,"\n")
       shell(scriptTransferCall)
     }
 
@@ -169,7 +175,7 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
                            "cd ",Tempdir.backend,"; ",   #change to backend temp dir
                            program," ./",runFile,suffix,        #execute runFile with Tempdir.backend as arg
                            " \"")
-      print(executeCall)
+      cat(executeCall,"\n")
       system(executeCall)
     } else {
       path_runfile = paste0(Tempdir.frontend,"\\putty_runFile.txt")
@@ -179,7 +185,7 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
         program," ",runFile," ",suffix, "\n")
       writeLines(backend.bashcall,con = path_runfile)
       executeCall = paste0('Plink -ssh ',hostString,keyPath," -m ",path_runfile)
-      cat(executeCall)
+      cat(executeCall,"\n")
       shell(executeCall)
     }
 
@@ -190,11 +196,12 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
     if(lang=="bash") {
       retrieveCall = paste0("scp ", transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
+      cat(retrieveCall,"\n")
       system(retrieveCall)
     } else {
       retrieveCall = paste0("PSCP ",keyPath, transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
-      cat(retrieveCall)
+      cat(retrieveCall,"\n")
       shell(retrieveCall)
     }
 
@@ -345,10 +352,12 @@ getResult = function(ticket, conf=NULL, user=NULL, host="login.gbar.dtu.dk",tran
     if(lang=="BATCH") {
       retrieveCall = paste0("PSCP ",keyPath, transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
+      cat(retrieveCall,"\n")
       status = shell(retrieveCall,intern=T)
     } else {
       retrieveCall = paste0("scp ", transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
+      cat(retrieveCall,"\n")
       status = system(retrieveCall,intern=T)
     }
     #check if ticket or a result are found, stop if scp return non-zero status
@@ -363,12 +372,14 @@ getResult = function(ticket, conf=NULL, user=NULL, host="login.gbar.dtu.dk",tran
     if(verbose) {
       if(lang=="bash") {
         print("print out file from backend master")
-        system(paste0(
+        printCall = paste0(
           "ssh ",hostString," less ",
           Tempdir.backend,
           "/fastRditijuu_qsub_async.sh.o",
           substr(ticket[[2]],1,7)
-        ))
+        )
+        cat(printCall,"\n")
+        system(printCall)
       } else {
         getPrint_path = paste0(Tempdir.frontend,"/","putty_getPrint.txt")
         writeLines(paste0(
@@ -376,7 +387,9 @@ getResult = function(ticket, conf=NULL, user=NULL, host="login.gbar.dtu.dk",tran
           Tempdir.backend,
           "/fastRditijuu_qsub_async.sh.o",
           substr(ticket[[2]],1,7)),con=getPrint_path)
-        shell(paste("Plink -ssh",hostString,keyPath,"-m", getPrint_path))
+        printCall = paste("Plink -ssh",hostString,keyPath,"-m", getPrint_path)
+        cat(printCall,"\n")
+        shell(printCall)
       }
     }
 
@@ -431,8 +444,10 @@ cleanUp = function(user=NULL,conf=NULL,host='login.gbar.dtu.dk',
   with(data=conf,{
     if(lang=="bash") {
 
-      system(paste0("ssh ",hostString," rm -rf tmp"))
-      system(paste0("ssh ",hostString," rm -rf .BatchJobs.R"))
+      cleanCall = paste0("ssh ",hostString," 'rm -rf tmp; rm -rf .BatchJobs.R'")
+      cat(cleanCall,"\n")
+      system(cleanCall)
+
     } else {
       cleanUp_path = paste0(shell("echo %TEMP%",intern=T),"\\","putty_cleanUp.txt")
       writeLines("
@@ -440,7 +455,10 @@ cleanUp = function(user=NULL,conf=NULL,host='login.gbar.dtu.dk',
                  rm -rf .BatchJobs.R
                  ",con=cleanUp_path)
       if(is.null(keyPath)) stop("keyPath is needed for windows putty")
-      shell(paste("Plink -ssh",keyPath,hostString,"-m",cleanUp_path))
+
+      cleanCall = paste("Plink -ssh",keyPath,hostString,"-m",cleanUp_path)
+      cat(cleanCall,"\n")
+      shell(cleanCall)
 
     }
   })
