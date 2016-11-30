@@ -4,6 +4,7 @@
 #' @param arg arguments for function
 #' @param user username
 #' @param host server (will connect to user@server)
+#' @param transferHost server to transfer files through, will use transfer.gbar.dtu.dk or host if NULL
 #' @param keyPath specifiy file and path for private key, if NULL non or system default.
 #' @param packages char vector of package names (can be empty)
 #' @param Rscript execute by Rscript or R CMD BATCH (former  only supported on gbar, ladder no verbose)
@@ -16,7 +17,7 @@
 #' @return value return by evaluated function
 #' @export
 #'
-doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',keyPath=NULL,packages=c(),
+doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',transferHost=NULL,keyPath=NULL,packages=c(),
                    Rscript=TRUE,globalVar=list(),async=FALSE,nCores =1,
                    qsub.walltime="00:09:00",qsub.proc=1,qsub.nodes=1,qsub.moreArgs=NULL) {
 
@@ -27,6 +28,11 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
   #wrap function body in conf arguments, otherwise fall back to function formals
   if(is.null(conf)) conf=list()
   out = with(data = conf, expr = {
+
+    if(is.null(transferHost)) {
+      if(host %in% c("login.gbar.dtu.dk","login.hpc.dtu.dk")) transferHost = "transfer.gbar.dtu.dk"
+    }
+
     print(ls())
     print(host)
     if(!is.list(arg)) arg = list(arg) #wrap arg in list if not list
@@ -49,6 +55,7 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
     cat("this is fastRditijuu version: ", thisVersion , "\n")
     print("call server... make temp dir,")
     hostString = paste0(user,"@",host) #make ssh host string
+    transferString = paste0(user,"@",transferHost) #make ssh host string
     if(lang=="bash") {
       tempDirCall = paste(
         "timeout 15 ssh",hostString,keyPath, #ssh the server with 10 sec time out
@@ -122,11 +129,11 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
     #server call#2, push variables file to server
     cat(" transfer variables,")
     if(lang=="bash") {
-      varTransferCall = paste0("scp ",varPath.frontend," ",hostString,":",
+      varTransferCall = paste0("scp ",varPath.frontend," ",transferString,":",
                                Tempdir.backend,"/",varFileName)
       system(varTransferCall)
     } else {
-      varTransferCall = paste0("PSCP ",keyPath,varPath.frontend," ",hostString,":",
+      varTransferCall = paste0("PSCP ",keyPath,varPath.frontend," ",transferString,":",
                                Tempdir.backend,"/",varFileName)
 
       cat(varTransferCall)
@@ -140,10 +147,10 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
     scriptPath = system.file(paste0("/scripts/",runFile),package="fastRditijuu")
     cat(" transfer executable,")
     if(lang=="bash") {
-      scriptTransferCall = paste0("scp ",scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+      scriptTransferCall = paste0("scp ",scriptPath," ",transferString,":",Tempdir.backend,"/",runFile)
       system(scriptTransferCall)
     } else {
-      scriptTransferCall = paste0("PSCP ",keyPath,scriptPath," ",hostString,":",Tempdir.backend,"/",runFile)
+      scriptTransferCall = paste0("PSCP ",keyPath,scriptPath," ",transferString,":",Tempdir.backend,"/",runFile)
       cat(scriptTransferCall)
       shell(scriptTransferCall)
     }
@@ -181,11 +188,11 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
     cat("returning from server...")
     outFile = "Tempout.rda"
     if(lang=="bash") {
-      retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
+      retrieveCall = paste0("scp ", transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
       system(retrieveCall)
     } else {
-      retrieveCall = paste0("PSCP ",keyPath, hostString,":",Tempdir.backend ,"/",outFile,
+      retrieveCall = paste0("PSCP ",keyPath, transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
       cat(retrieveCall)
       shell(retrieveCall)
@@ -250,9 +257,10 @@ doClust = function(what,arg=list(),conf=NULL,user=NULL,host='login.gbar.dtu.dk',
 #'
 #' @return list of results
 #' @export
-lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk",keyPath=NULL, Rscript=T,
-                packages=c(),max.nodes=8,local=FALSE,globalVar=list(),async=T,nCores = 4,
-                qsub.walltime="00:09:59",qsub.proc=4,qsub.nodes=1,...) {
+lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk", transferHost = NULL,
+                keyPath=NULL, Rscript=T, packages=c(),max.nodes=8,local=FALSE,
+                globalVar=list(),async=T,nCores = 4,qsub.walltime="00:09:59",qsub.proc=4,
+                qsub.nodes=1,...) {
   if(local) {
     # require("BatchJobs")
     # out = do.call(what=doBatchJob,args=list(X=X,FUN=FUN,max.nodes=max.nodes,
@@ -269,21 +277,23 @@ lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk",keyPath=N
 
       out = doClust('doBatchJob',
                     arg=list(
-                      X=X,
-                      FUN=FUN,
-                      max.nodes=max.nodes,
-                      packages=packages,
-                      nCores = nCores,
+                      X        = X,
+                      FUN      = FUN,
+                      max.nodes= max.nodes,
+                      packages = packages,
+                      nCores   = nCores,
                       ...),
-                    packages  = packages,
-                    Rscript   = Rscript,
-                    globalVar = globalVar,
-                    user      = user,
-                    host      = host,
-                    keyPath   = keyPath,
-                    async     = async,
-                    conf      = conf,
-                    nCores    = nCores,
+
+                    packages      = packages,
+                    Rscript       = Rscript,
+                    globalVar     = globalVar,
+                    user          = user,
+                    transferHost  = transferHost,
+                    host          = host,
+                    keyPath       = keyPath,
+                    async         = async,
+                    conf          = conf,
+                    nCores        = nCores,
                     qsub.walltime = qsub.walltime,
                     qsub.proc     = qsub.proc,
                     qsub.nodes    = qsub.nodes)
@@ -297,12 +307,13 @@ lply = function(X, FUN, conf=NULL, user=NULL, host="login.gbar.dtu.dk",keyPath=N
 #' @param ticket the out object from lply or doClust when call with async=TRUE
 #' @param user username on server
 #' @param host server host address
+#' @param transferString server to handle file transfer, host or transfer.gbar.dtu.dk if NULL
 #' @param verbose if TRUE, prints from R master, can be used to monitor progress and debugging
 #'
 #' @return Either the result of a finished job, or if not complete yet, then a ticket like object
 #' @export
 #'
-getResult = function(ticket, conf=NULL, user=NULL, host="login.gbar.dtu.dk",verbose=F,keyPath=NULL) {
+getResult = function(ticket, conf=NULL, user=NULL, host="login.gbar.dtu.dk",transferHost=NULL,verbose=F,keyPath=NULL) {
 
   if(is.null(conf)&&is.null(user)) stop("either provide user or conf ('a fastRconfig object')")
   if(!is.null(conf) && !inherits(conf,'fastRconfig')) stop("conf is not of fastRconfig class, use makeConfig()")
@@ -322,15 +333,21 @@ getResult = function(ticket, conf=NULL, user=NULL, host="login.gbar.dtu.dk",verb
       Tempdir.frontend = system("mkdir -p /tmp; mktemp -d /tmp/XXXXXXXXXXXX",intern = TRUE)
     }
     Tempdir.backend = ticket[[1]] #ticket$backend.tmp
-    hostString = paste(user,host,sep="@")
+
+    if(is.null(transferHost)) {
+      if(host %in% c("login.gbar.dtu.dk","login.hpc.dtu.dk")) transferHost = "transfer.gbar.dtu.dk"
+    }
+    hostString = paste0(user,"@",host)
+    transferString = paste0(user,"@",transferHost)
+
     cat("contact server...")
     outFile = "Tempout.rda"
     if(lang=="BATCH") {
-      retrieveCall = paste0("PSCP ",keyPath, hostString,":",Tempdir.backend ,"/",outFile,
+      retrieveCall = paste0("PSCP ",keyPath, transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
       status = shell(retrieveCall,intern=T)
     } else {
-      retrieveCall = paste0("scp ", hostString,":",Tempdir.backend ,"/",outFile,
+      retrieveCall = paste0("scp ", transferString,":",Tempdir.backend ,"/",outFile,
                             "  ",Tempdir.frontend,"/",outFile)
       status = system(retrieveCall,intern=T)
     }
@@ -402,13 +419,14 @@ return(out)
 #' @return TRUE/1 if found and deleted
 #' @export
 #'
-cleanUp = function(user=NULL,conf=NULL,host='login.gbar.dtu.dk',keyPath=NULL) {
+cleanUp = function(user=NULL,conf=NULL,host='login.gbar.dtu.dk',
+                   keyPath=NULL) {
   # #check if either user or conf is provided
   if(is.null(conf)&&is.null(user)) stop("either provide user or conf ('a fastRconfig object')")
   if(!is.null(conf) && !inherits(conf,'fastRconfig')) stop("conf is not of fastRconfig class, use makeConfig()")
   if(is.null(conf)) conf=list()
   lang = if(!Sys.info()['sysname']=='Windows') "bash" else "BATCH" #check OS
-  hostString = paste0(user,"@",host)
+
   keyPath = if(is.null(keyPath)) "" else paste0(" -i ",keyPath," ")
   with(data=conf,{
     if(lang=="bash") {
