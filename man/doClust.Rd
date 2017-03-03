@@ -5,9 +5,9 @@
 \title{do.call with cluster as backend via ssh}
 \usage{
 doClust(what, arg = list(), conf = NULL, user = NULL,
-  host = "login.gbar.dtu.dk", keyPath = NULL, packages = c(),
-  Rscript = TRUE, globalVar = list(), async = FALSE, nCores = 1,
-  qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1,
+  host = "login.gbar.dtu.dk", transferHost = NULL, keyPath = NULL,
+  packages = c(), Rscript = TRUE, globalVar = list(), async = FALSE,
+  nCores = 1, qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1,
   qsub.moreArgs = NULL)
 }
 \arguments{
@@ -18,6 +18,8 @@ doClust(what, arg = list(), conf = NULL, user = NULL,
 \item{user}{username}
 
 \item{host}{server (will connect to user@server)}
+
+\item{transferHost}{server to transfer files through, will use transfer.gbar.dtu.dk or host if NULL}
 
 \item{keyPath}{specifiy file and path for private key, if NULL non or system default.}
 
@@ -41,4 +43,3 @@ value return by evaluated function
 \description{
 do.call with cluster as backend via ssh
 }
-

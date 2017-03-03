@@ -4,10 +4,7 @@
 \alias{makeConfig}
 \title{Specify all settings and save to config object}
 \usage{
-makeConfig(user = NULL, host = "login.gbar.dtu.dk", keyPath = NULL,
-  packages = c(), Rscript = TRUE, globalVar = list(), async = FALSE,
-  nCores = 1, qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1,
-  qsub.moreArgs = NULL)
+makeConfig(...)
 }
 \arguments{
 \item{user}{username}
@@ -34,4 +31,3 @@ value return by evaluated function
 \description{
 Specify all settings and save to config object
 }
-

@@ -5,9 +5,10 @@
 \title{Powerful lapply function with a qsub(Torque/PBS)-cluster as backend}
 \usage{
 lply(X, FUN, conf = NULL, user = NULL, host = "login.gbar.dtu.dk",
-  keyPath = NULL, Rscript = T, packages = c(), max.nodes = 24,
-  local = FALSE, globalVar = list(), async = F, nCores = 1,
-  qsub.walltime = "00:09:00", qsub.proc = 1, qsub.nodes = 1, ...)
+  transferHost = NULL, keyPath = NULL, Rscript = T, packages = c(),
+  max.nodes = 8, local = FALSE, globalVar = list(), async = T,
+  nCores = 4, qsub.walltime = "00:09:59", qsub.proc = 4, qsub.nodes = 1,
+  ...)
 }
 \arguments{
 \item{X}{object to map}
@@ -48,4 +49,3 @@ list of results
 \description{
 Powerful lapply function with a qsub(Torque/PBS)-cluster as backend
 }
-

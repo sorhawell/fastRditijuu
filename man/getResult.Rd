@@ -4,8 +4,8 @@
 \alias{getResult}
 \title{Read Rout, useful if Rscript=FALSE to retrieve print}
 \usage{
-getResult(ticket, user, host = "login.gbar.dtu.dk", verbose = F,
-  keyPath = NULL)
+getResult(ticket, conf = NULL, user = NULL, host = "login.gbar.dtu.dk",
+  transferHost = NULL, verbose = F, keyPath = NULL)
 }
 \arguments{
 \item{ticket}{the out object from lply or doClust when call with async=TRUE}
@@ -15,6 +15,8 @@ getResult(ticket, user, host = "login.gbar.dtu.dk", verbose = F,
 \item{host}{server host address}
 
 \item{verbose}{if TRUE, prints from R master, can be used to monitor progress and debugging}
+
+\item{transferString}{server to handle file transfer, host or transfer.gbar.dtu.dk if NULL}
 }
 \value{
 Either the result of a finished job, or if not complete yet, then a ticket like object
@@ -22,4 +24,3 @@ Either the result of a finished job, or if not complete yet, then a ticket like 
 \description{
 Read Rout, useful if Rscript=FALSE to retrieve print
 }
-

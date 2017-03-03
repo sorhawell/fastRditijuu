@@ -2,9 +2,13 @@
 % Please edit documentation in R/functions.R
 \name{cleanUp}
 \alias{cleanUp}
+\alias{doClust}
+\alias{lply}
+\alias{getResult}
 \title{Clean up for temp files}
 \usage{
-cleanUp(user, host = "login.gbar.dtu.dk", keyPath = NULL)
+cleanUp(user = NULL, conf = NULL, host = "login.gbar.dtu.dk",
+  keyPath = NULL)
 }
 \arguments{
 \item{user}{server to read from}
@@ -19,4 +23,3 @@ TRUE/1 if found and deleted
 \description{
 Clean up for temp files
 }
-
