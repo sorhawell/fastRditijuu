@@ -2,6 +2,9 @@
 
 export(cleanUp)
 export(doClust)
+export(doOneGrid)
 export(getResult)
 export(lply)
 export(makeConfig)
+export(makeGrid)
+export(repfold)
