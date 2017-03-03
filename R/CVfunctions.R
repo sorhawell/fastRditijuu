@@ -170,54 +170,56 @@ doOneGrid = function(one,parent.function.name="model.function",Dim=2,verbose=F,.
 }
 
 
-doGrid = function(X,y,folds.list,model.function,nProc=1,trainArgsGrid,seeds=NULL) {
-  if(is.null(seeds)) seeds = runif(length(folds.list))
-  if(nProc==1) {
-    allFolds = list()
-    for(i in 1:length(folds.list)) {
-      print(names(folds.list)[i])
-      test.ind = 1:length(y) %in% folds.list[[i]]
-      Xtest = X[test.ind]; Xtrain = X[!test.ind]
-      ytest = y[test.ind]; ytrain = y[!test.ind]
-
-      #do grid for this fold
-      thisFold = list()
-      for(j in 1:length(trainArgsGrid)) {
-        theseArgs = list(
-          X=Xtrain,y=ytrain,Xtest=Xtest,ytest=ytest,
-          trainArgs = trainArgsGrid[[j]])
-        set.seed(seeds[i])
-        thisModelOut = do.call(model.function,theseArgs)
-        thisFold[[j]] = thisModelOut
-      }
-      allFolds[[i]] = thisFold
-
-    }
-  }
-  out
-}
-
-
-doOneFold = function(aFold,trainArgs,X,y,model.function) {
-  test.ind = 1:length(y) %in% aFold
-  Xtest = X[test.ind ]; Xtrain = X[!test.ind ]
-  ytest = y[test.ind ]; ytrain = y[!test.ind ]
-  args = list(
-    X=Xtrain,y=ytrain,Xtest=Xtest,ytest=ytest,
-    trainArgs = trainArgs)
-  out = do.call(model.function,args)
-}
-
-doOneFold.fix = function(aFold) {
-  #assuming following arguments in env
-  #trainArgs,X,y,model.function) {
-  test.ind = 1:length(y) %in% aFold
-  Xtest =  X[test.ind ]; Xtrain = X[!test.ind ]
-  ytest =  y[test.ind ]; ytrain = y[!test.ind ]
-  args = list(
-    Xtrain=Xtrain,ytrain=ytrain,Xtest=Xtest,ytest=ytest,
-    trainArgs = trainArgs)
-  out = do.call(model.function,args)
-}
-
-
+#deprecated...
+#
+# doGrid = function(X,y,folds.list,model.function,nProc=1,trainArgsGrid,seeds=NULL) {
+#   if(is.null(seeds)) seeds = runif(length(folds.list))
+#   if(nProc==1) {
+#     allFolds = list()
+#     for(i in 1:length(folds.list)) {
+#       print(names(folds.list)[i])
+#       test.ind = 1:length(y) %in% folds.list[[i]]
+#       Xtest = X[test.ind]; Xtrain = X[!test.ind]
+#       ytest = y[test.ind]; ytrain = y[!test.ind]
+#
+#       #do grid for this fold
+#       thisFold = list()
+#       for(j in 1:length(trainArgsGrid)) {
+#         theseArgs = list(
+#           X=Xtrain,y=ytrain,Xtest=Xtest,ytest=ytest,
+#           trainArgs = trainArgsGrid[[j]])
+#         set.seed(seeds[i])
+#         thisModelOut = do.call(model.function,theseArgs)
+#         thisFold[[j]] = thisModelOut
+#       }
+#       allFolds[[i]] = thisFold
+#
+#     }
+#   }
+#   out
+# }
+#
+#
+# doOneFold = function(aFold,trainArgs,X,y,model.function) {
+#   test.ind = 1:length(y) %in% aFold
+#   Xtest = X[test.ind ]; Xtrain = X[!test.ind ]
+#   ytest = y[test.ind ]; ytrain = y[!test.ind ]
+#   args = list(
+#     X=Xtrain,y=ytrain,Xtest=Xtest,ytest=ytest,
+#     trainArgs = trainArgs)
+#   out = do.call(model.function,args)
+# }
+#
+# doOneFold.fix = function(aFold) {
+#   #assuming following arguments in env
+#   #trainArgs,X,y,model.function) {
+#   test.ind = 1:length(y) %in% aFold
+#   Xtest =  X[test.ind ]; Xtrain = X[!test.ind ]
+#   ytest =  y[test.ind ]; ytrain = y[!test.ind ]
+#   args = list(
+#     Xtrain=Xtrain,ytrain=ytrain,Xtest=Xtest,ytest=ytest,
+#     trainArgs = trainArgs)
+#   out = do.call(model.function,args)
+# }
+#
+#
