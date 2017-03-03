@@ -2,31 +2,13 @@ library("fastRditijuu")
 mean(1:7)
 do.call(mean,list(1:7))     #local
 
-#windows
-doClust(mean,1:10,user = "sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk")
-
-#ubuntu
-doClust(mean,1:10,user = "sowe")
-
-#confi
-conf = makeConfig(user = "sowe",package="randomForest")
-doClust(mean,1:10,conf)
-lply(1:10,function(x) x+1,user="sowe")
-
+out = doClust(mean,1:10,user="sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk")
 
 
 X = data.frame(replicate(6,rnorm(1500)))
 y = apply(X,1,sum)
-system.time({
-  out = doClust(function(x) mclapply(x,function(x) tail(randomForest(X,y)$rsq,1),mc.cores=4),
-  1:24,"sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk",packages = c("parallel","randomForest"),
-  globalVar = list(X=X,y=y))
-})
-c
 
 #hello cluster
-out = system("timeout 5 ssh sowe@login.gbar.dtu.dk ls",intern=T)
-a=2
 out = doClust(function(x) x+a ,1:8, globalVar = list(a=a),user="sowe",async = T,qsub.walltime="00:10:00")
 result = getResult(out,user="sowe",verbose = T)
 cleanUp(user="sowe")
@@ -95,16 +77,14 @@ result = getResult(out,user="sowe",verbose = T)
 
 #try run iterate 1200 RF models asynchonously with lply
 library("fastRditijuu")
-conf = makeConfig()
-
-
 X = data.frame(replicate(24,rnorm(2500)))
 y = apply(X[,1:3],1,sum)
 X[] = X[1:3]
 X[] = X[] + rnorm(500*24)
 
+
 #run 1000 times on cluster
-ticket = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
+ticket = lply(X=rep(1:24,2),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
            #that extra stuff you need to mention
            globalVar=list(X=X,y=y),  #gotta mention global variables
            packages=c("randomForest"), #mention packages to be installed and/or loaded
@@ -112,10 +92,38 @@ ticket = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)
            #host="grid01.compute.dtu.dk",Rscript=T,
            keyPath ="c:/Users/sowe/.ssh/fastr2.ppk",
            async = T,nCores=4,
-           max.nodes = 40,
+           max.nodes = 7,
            qsub.walltime = "00:15:00",
-           qsub.proc = 1)             #optional limit to certain number of nodes
+           qsub.proc =4)             #optional limit to certain number of nodes
                                        # ... do not set higher than 80.
 result = getResult(ticket,user="sowe",verbose = TRUE, keyPath ="c:/Users/sowe/.ssh/fastr2.ppk")
-plot(rep(1:24,2),unlist(result),col="#23232313",log="x")
+plot(rep(1:24,2),unlist(result),col="#23232393",log="x")
 cleanUp("sowe",keyPath = "C:/Users/sowe/.ssh/fastr2.ppk")
+
+
+
+#try run iterate 1200 RF models asynchonously with lply
+
+#1 set up cluster connection
+library("fastRditijuu")
+CONF = makeConfig(user="sowe",keyPath ="c:/Users/sowe/.ssh/fastr2.ppk",
+                  tempFolder = NULL,
+
+                  #optional
+                  nCores = 4,qsub.proc = 4,max.nodes=23,async = T,qsub.walltime="00:09:00")
+
+#make some data
+X = data.frame(replicate(24,rnorm(500)))
+y = apply(X[,1:3],1,sum)
+X[] = X[1:3]
+X[] = X[] + rnorm(500*24)
+
+
+
+#start a function on server
+ticket = lply(X=rep(1:24,50),function(mtry) tail(randomForest(x=X,y=y,mtry=mtry)$rsq,1),
+              conf = CONF, globalVar = list(X=X,y=y),packages="randomForest")
+
+result = getResult(ticket,conf = CONF ,verbose = T)
+plot((rep(1:24,50)),unlist(result),col="#23232340",log="x")
+cleanUp(conf=CONF)
