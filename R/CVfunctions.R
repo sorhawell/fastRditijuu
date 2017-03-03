@@ -1,7 +1,6 @@
 
 
 #' Make indexes for a repeated k-fold cross-validation.
-#' @aliases gridSearch
 #' @param N number of observations in training set, or a target vector of N elements
 #' @param reps number of repetitions
 #' @param folds number of folds
@@ -28,7 +27,6 @@ repfold = function(N,reps=5,folds=20) {
 }
 
 #' make a job list for a repeated kfold CV grid search
-#' @aliases gridSearch
 #' @param N number of observations in training set, or a target vector of N elements
 #' @param reps number of repetitions
 #' @param folds number of folds
@@ -59,7 +57,6 @@ makeGrid = function(N,reps=10,folds=10,trainArgs = list()) {
 
 
 #' Perform one job in a grid
-#' @aliases gridSearch
 #' @param one one job, as defined by makeGrid
 #' @param parent.function.name doOneGrid apply a parent function of this name
 #' @param Dim is training set X a list dim=1, or data.frame dim=2
@@ -67,6 +64,9 @@ makeGrid = function(N,reps=10,folds=10,trainArgs = list()) {
 #'
 #' @return result from model.function
 #' @export
+#'
+#' @usage
+#'
 #'
 #' @examples
 #'library(randomForest)

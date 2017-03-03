@@ -2,7 +2,6 @@
 % Please edit documentation in R/CVfunctions.R
 \name{makeGrid}
 \alias{makeGrid}
-\alias{gridSearch}
 \title{make a job list for a repeated kfold CV grid search}
 \usage{
 makeGrid(N, reps = 10, folds = 10, trainArgs = list())

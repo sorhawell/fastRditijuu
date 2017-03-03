@@ -434,7 +434,6 @@ return(out)
 #' @param host  print file to read
 #' @param keyPath
 #'
-#' @aliases doClust lply getResult
 #' @return TRUE/1 if found and deleted
 #' @export
 #'

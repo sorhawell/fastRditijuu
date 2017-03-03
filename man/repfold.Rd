@@ -2,7 +2,6 @@
 % Please edit documentation in R/CVfunctions.R
 \name{repfold}
 \alias{repfold}
-\alias{gridSearch}
 \title{Make indexes for a repeated k-fold cross-validation.}
 \usage{
 repfold(N, reps = 5, folds = 20)

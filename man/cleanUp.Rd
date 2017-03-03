@@ -2,9 +2,6 @@
 % Please edit documentation in R/functions.R
 \name{cleanUp}
 \alias{cleanUp}
-\alias{doClust}
-\alias{lply}
-\alias{getResult}
 \title{Clean up for temp files}
 \usage{
 cleanUp(user = NULL, conf = NULL, host = "login.gbar.dtu.dk",

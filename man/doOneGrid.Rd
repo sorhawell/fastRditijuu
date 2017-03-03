@@ -2,11 +2,9 @@
 % Please edit documentation in R/CVfunctions.R
 \name{doOneGrid}
 \alias{doOneGrid}
-\alias{gridSearch}
 \title{Perform one job in a grid}
 \usage{
-doOneGrid(one, parent.function.name = "model.function", Dim = 2,
-  verbose = F, ...)
+
 }
 \arguments{
 \item{one}{one job, as defined by makeGrid}
