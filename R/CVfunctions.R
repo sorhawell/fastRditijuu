@@ -170,6 +170,17 @@ doOneGrid = function(one,parent.function.name="model.function",Dim=2,verbose=F,.
   thisModelOut = do.call(get("model.function"),theseArgs)
 }
 
+#' Perform one job in a grid
+#' @param one one job, as defined by makeGrid
+#' @param parent.function.name doOneGrid apply a parent function of this name
+#' @param Dim is training set X a list dim=1, or data.frame dim=2
+#' @param ... other args passed to model.function
+#'
+#' @return result from model.function
+#' @export
+#'
+#'
+#' @examples
 doOneGrid1 = function(one,parent.function.name="model.function",Dim=1,verbose=F,...) {
   #assuming following variables in parent env
   #X,y,model.function)

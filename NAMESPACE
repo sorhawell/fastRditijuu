@@ -3,6 +3,7 @@
 export(cleanUp)
 export(doClust)
 export(doOneGrid)
+export(doOneGrid1)
 export(getResult)
 export(lply)
 export(makeConfig)
