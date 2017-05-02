@@ -150,6 +150,7 @@ makeGrid = function(N,reps=10,folds=10,trainArgs = list()) {
 #'
 
 #'
+
 doOneGrid = function(one,parent.function.name="model.function",Dim=2,verbose=F,...) {
   #assuming following variables in parent env
   #X,y,model.function)
@@ -165,6 +166,25 @@ doOneGrid = function(one,parent.function.name="model.function",Dim=2,verbose=F,.
   theseArgs = list(
       X=Xtrain,y=ytrain,Xtest=Xtest,ytest=ytest,
       trainArgs = one$argSet,...)
+  if(!is.null(one$seed)) set.seed(one$seed)
+  thisModelOut = do.call(get("model.function"),theseArgs)
+}
+
+doOneGrid1 = function(one,parent.function.name="model.function",Dim=1,verbose=F,...) {
+  #assuming following variables in parent env
+  #X,y,model.function)
+  test.ind = 1:length(y) %in%  one$fold
+
+  ytest = y[test.ind ];  ytrain = y[!test.ind ]
+  if(Dim==1) {
+    Xtest = X[test.ind ];  Xtrain = X[!test.ind ]
+  } else {
+    Xtest = X[test.ind,];  Xtrain = X[!test.ind,]
+  }
+
+  theseArgs = list(
+    X=Xtrain,y=ytrain,Xtest=Xtest,ytest=ytest,
+    trainArgs = one$argSet,...)
   if(!is.null(one$seed)) set.seed(one$seed)
   thisModelOut = do.call(get("model.function"),theseArgs)
 }
